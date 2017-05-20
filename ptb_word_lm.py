@@ -63,6 +63,7 @@ import numpy as np
 import tensorflow as tf
 
 import reader
+import importlib
 
 flags = tf.flags
 logging = tf.logging
@@ -76,6 +77,10 @@ flags.DEFINE_string("save_path", None,
                     "Model output directory.")
 flags.DEFINE_bool("use_fp16", False,
                   "Train using 16-bit floats instead of 32bit floats")
+flags.DEFINE_float("weight_decay", 0.0,
+                  "Weight decay of L1 norm to learn sparsity")
+flags.DEFINE_string("regularizer", 'l1_regularizer',
+                    "Regularizer type.")
 
 FLAGS = flags.FLAGS
 
@@ -166,7 +171,14 @@ class PTBModel(object):
         [logits],
         [tf.reshape(input_.targets, [-1])],
         [tf.ones([batch_size * num_steps], dtype=data_type())])
-    self._cost = cost = tf.reduce_sum(loss) / batch_size
+
+    # L1 regularization
+    modname = importlib.import_module('tensorflow.contrib.layers')
+    the_regularizer = getattr(modname, FLAGS.regularizer)(scale=FLAGS.weight_decay, scope=FLAGS.regularizer)
+    reg_loss = tf.contrib.layers.apply_regularization(the_regularizer, tf.trainable_variables()[1:])
+    self._regularization = reg_loss
+
+    self._cost = cost = tf.reduce_sum(loss) / batch_size / num_steps
     self._final_state = state
 
     if not is_training:
@@ -174,7 +186,7 @@ class PTBModel(object):
 
     self._lr = tf.Variable(0.0, trainable=False)
     tvars = tf.trainable_variables()
-    grads, _ = tf.clip_by_global_norm(tf.gradients(cost, tvars),
+    grads, _ = tf.clip_by_global_norm(tf.gradients(cost + reg_loss, tvars),
                                       config.max_grad_norm)
     optimizer = tf.train.GradientDescentOptimizer(self._lr)
     self._train_op = optimizer.apply_gradients(
@@ -201,6 +213,10 @@ class PTBModel(object):
     return self._cost
 
   @property
+  def regularization(self):
+    return self._regularization
+
+  @property
   def final_state(self):
     return self._final_state
 
@@ -216,7 +232,7 @@ class PTBModel(object):
 class SmallConfig(object):
   """Small config."""
   init_scale = 0.1
-  learning_rate = 1.0
+  learning_rate = 1.0 / 20
   max_grad_norm = 5
   num_layers = 2
   num_steps = 20
@@ -232,7 +248,7 @@ class SmallConfig(object):
 class MediumConfig(object):
   """Medium config."""
   init_scale = 0.05
-  learning_rate = 1.0
+  learning_rate = 1.0 / 35
   max_grad_norm = 5
   num_layers = 2
   num_steps = 35
@@ -248,7 +264,7 @@ class MediumConfig(object):
 class LargeConfig(object):
   """Large config."""
   init_scale = 0.04
-  learning_rate = 1.0
+  learning_rate = 1.0 / 35
   max_grad_norm = 10
   num_layers = 2
   num_steps = 35
@@ -280,12 +296,15 @@ class TestConfig(object):
 def run_epoch(session, model, eval_op=None, verbose=False):
   """Runs the model on the given data."""
   start_time = time.time()
+  outputs = {}
+  regularizations = 0.0
   costs = 0.0
   iters = 0
   state = session.run(model.initial_state)
 
   fetches = {
       "cost": model.cost,
+      "regularization": model.regularization,
       "final_state": model.final_state,
   }
   if eval_op is not None:
@@ -302,14 +321,21 @@ def run_epoch(session, model, eval_op=None, verbose=False):
     state = vals["final_state"]
 
     costs += cost
-    iters += model.input.num_steps
+    regularizations += vals["regularization"]
+    iters += 1 # model.input.num_steps
 
     if verbose and step % (model.input.epoch_size // 10) == 10:
-      print("%.3f perplexity: %.3f speed: %.0f wps" %
-            (step * 1.0 / model.input.epoch_size, np.exp(costs / iters),
-             iters * model.input.batch_size / (time.time() - start_time)))
+      print("%.3f perplexity: %.3f  cost: %.4f  regularization: %.4f  total_cost: %.4f   speed: %.0f wps" %
+            (step * 1.0 / model.input.epoch_size,
+             np.exp(costs / iters),
+             costs / iters,
+             regularizations / iters,
+             costs / iters + regularizations / iters,
+             iters * model.input.num_steps * model.input.batch_size / (time.time() - start_time)))
 
-  return np.exp(costs / iters)
+  outputs['perplexity'] = np.exp(costs / iters)
+  outputs['regularization'] = regularizations / iters
+  return outputs
 
 
 def get_config():
@@ -367,14 +393,14 @@ def main(_):
         m.assign_lr(session, config.learning_rate * lr_decay)
 
         print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(m.lr)))
-        train_perplexity = run_epoch(session, m, eval_op=m.train_op,
+        outputs = run_epoch(session, m, eval_op=m.train_op,
                                      verbose=True)
-        print("Epoch: %d Train Perplexity: %.3f" % (i + 1, train_perplexity))
-        valid_perplexity = run_epoch(session, mvalid)
-        print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
+        print("Epoch: %d Train Perplexity: %.3f   regularization: %.4f " % (i + 1, outputs['perplexity'], outputs['regularization']))
+        outputs = run_epoch(session, mvalid)
+        print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, outputs['perplexity']))
 
-      test_perplexity = run_epoch(session, mtest)
-      print("Test Perplexity: %.3f" % test_perplexity)
+      outputs = run_epoch(session, mtest)
+      print("Test Perplexity: %.3f" % outputs['perplexity'])
 
       if FLAGS.save_path:
         print("Saving model to %s." % FLAGS.save_path)
