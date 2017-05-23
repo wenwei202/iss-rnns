@@ -61,6 +61,7 @@ import time
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.core.framework import summary_pb2
 
 import reader
 import importlib
@@ -73,11 +74,11 @@ flags.DEFINE_string(
     "A type of model. Possible options are: small, medium, large.")
 flags.DEFINE_string("data_path", None,
                     "Where the training/test data is stored.")
-flags.DEFINE_string("save_path", None,
+flags.DEFINE_string("save_path", '/tmp/ptb',
                     "Model output directory.")
 flags.DEFINE_bool("use_fp16", False,
                   "Train using 16-bit floats instead of 32bit floats")
-flags.DEFINE_float("weight_decay", 0.0,
+flags.DEFINE_float("weight_decay", 0.00001,
                   "Weight decay of L1 norm to learn sparsity")
 flags.DEFINE_string("regularizer", 'l1_regularizer',
                     "Regularizer type.")
@@ -178,7 +179,21 @@ class PTBModel(object):
     reg_loss = tf.contrib.layers.apply_regularization(the_regularizer, tf.trainable_variables()[1:])
     self._regularization = reg_loss
 
-    self._cost = cost = tf.reduce_sum(loss) / batch_size / num_steps
+    sparsity = {}
+    if FLAGS.weight_decay > 0:
+      # sparsity statistcis
+      for train_var in tf.trainable_variables():
+        # zerout by small threshold to stablize the sparsity
+        sp_name = train_var.op.name + '_sparsity'
+        where_cond = tf.less(tf.abs(train_var), 0.0001)
+        train_var = tf.assign(train_var, tf.where(where_cond,
+                                                  tf.zeros(tf.shape(train_var)),
+                                                  train_var))
+        s = tf.nn.zero_fraction(train_var)
+        sparsity[sp_name] = s
+    self._sparsity = sparsity
+
+    self._cost = cost = tf.reduce_sum(loss) / batch_size
     self._final_state = state
 
     if not is_training:
@@ -217,6 +232,10 @@ class PTBModel(object):
     return self._regularization
 
   @property
+  def sparsity(self):
+    return self._sparsity
+
+  @property
   def final_state(self):
     return self._final_state
 
@@ -232,7 +251,7 @@ class PTBModel(object):
 class SmallConfig(object):
   """Small config."""
   init_scale = 0.1
-  learning_rate = 1.0 / 20
+  learning_rate = 1.0
   max_grad_norm = 5
   num_layers = 2
   num_steps = 20
@@ -248,7 +267,7 @@ class SmallConfig(object):
 class MediumConfig(object):
   """Medium config."""
   init_scale = 0.05
-  learning_rate = 1.0 / 35
+  learning_rate = 1.0
   max_grad_norm = 5
   num_layers = 2
   num_steps = 35
@@ -264,7 +283,7 @@ class MediumConfig(object):
 class LargeConfig(object):
   """Large config."""
   init_scale = 0.04
-  learning_rate = 1.0 / 35
+  learning_rate = 1.0
   max_grad_norm = 10
   num_layers = 2
   num_steps = 35
@@ -298,6 +317,7 @@ def run_epoch(session, model, eval_op=None, verbose=False):
   start_time = time.time()
   outputs = {}
   regularizations = 0.0
+  sparsity = {}
   costs = 0.0
   iters = 0
   state = session.run(model.initial_state)
@@ -305,6 +325,7 @@ def run_epoch(session, model, eval_op=None, verbose=False):
   fetches = {
       "cost": model.cost,
       "regularization": model.regularization,
+      "sparsity": model.sparsity,
       "final_state": model.final_state,
   }
   if eval_op is not None:
@@ -322,7 +343,8 @@ def run_epoch(session, model, eval_op=None, verbose=False):
 
     costs += cost
     regularizations += vals["regularization"]
-    iters += 1 # model.input.num_steps
+    sparsity = vals["sparsity"]
+    iters += model.input.num_steps
 
     if verbose and step % (model.input.epoch_size // 10) == 10:
       print("%.3f perplexity: %.3f  cost: %.4f  regularization: %.4f  total_cost: %.4f   speed: %.0f wps" %
@@ -331,10 +353,13 @@ def run_epoch(session, model, eval_op=None, verbose=False):
              costs / iters,
              regularizations / iters,
              costs / iters + regularizations / iters,
-             iters * model.input.num_steps * model.input.batch_size / (time.time() - start_time)))
+             iters * model.input.batch_size / (time.time() - start_time)))
 
   outputs['perplexity'] = np.exp(costs / iters)
+  outputs['cross_entropy'] = costs / iters
   outputs['regularization'] = regularizations / iters
+  outputs['total_cost'] = costs / iters + regularizations / iters
+  outputs['sparsity'] = sparsity
   return outputs
 
 
@@ -364,6 +389,10 @@ def main(_):
   eval_config.num_steps = 1
 
   with tf.Graph().as_default():
+
+    summary_writer = tf.summary.FileWriter(
+      FLAGS.save_path)
+
     initializer = tf.random_uniform_initializer(-config.init_scale,
                                                 config.init_scale)
 
@@ -371,20 +400,20 @@ def main(_):
       train_input = PTBInput(config=config, data=train_data, name="TrainInput")
       with tf.variable_scope("Model", reuse=None, initializer=initializer):
         m = PTBModel(is_training=True, config=config, input_=train_input)
-      tf.summary.scalar("Training Loss", m.cost)
-      tf.summary.scalar("Learning Rate", m.lr)
 
     with tf.name_scope("Valid"):
       valid_input = PTBInput(config=config, data=valid_data, name="ValidInput")
       with tf.variable_scope("Model", reuse=True, initializer=initializer):
         mvalid = PTBModel(is_training=False, config=config, input_=valid_input)
-      tf.summary.scalar("Validation Loss", mvalid.cost)
 
     with tf.name_scope("Test"):
       test_input = PTBInput(config=eval_config, data=test_data, name="TestInput")
       with tf.variable_scope("Model", reuse=True, initializer=initializer):
         mtest = PTBModel(is_training=False, config=eval_config,
                          input_=test_input)
+
+    #summaries = tf.get_collection(tf.GraphKeys.SUMMARIES)
+    #summary_op = tf.summary.merge(summaries)
 
     sv = tf.train.Supervisor(logdir=FLAGS.save_path)
     with sv.managed_session() as session:
@@ -396,11 +425,34 @@ def main(_):
         outputs = run_epoch(session, m, eval_op=m.train_op,
                                      verbose=True)
         print("Epoch: %d Train Perplexity: %.3f   regularization: %.4f " % (i + 1, outputs['perplexity'], outputs['regularization']))
+        value = summary_pb2.Summary.Value(tag="TrainPerplexity", simple_value=outputs['perplexity'])
+        summary = summary_pb2.Summary(value=[value])
+        summary_writer.add_summary(summary, i)
+        value = summary_pb2.Summary.Value(tag="cross_entropy", simple_value=outputs['cross_entropy'])
+        summary = summary_pb2.Summary(value=[value])
+        summary_writer.add_summary(summary, i)
+        value = summary_pb2.Summary.Value(tag="regularization", simple_value=outputs['regularization'])
+        summary = summary_pb2.Summary(value=[value])
+        summary_writer.add_summary(summary, i)
+        value = summary_pb2.Summary.Value(tag="total_cost", simple_value=outputs['total_cost'])
+        summary = summary_pb2.Summary(value=[value])
+        summary_writer.add_summary(summary, i)
+        for key, value in outputs['sparsity'].items():
+          value = summary_pb2.Summary.Value(tag=key, simple_value=value)
+          summary = summary_pb2.Summary(value=[value])
+          summary_writer.add_summary(summary, i)
+
         outputs = run_epoch(session, mvalid)
         print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, outputs['perplexity']))
+        value = summary_pb2.Summary.Value(tag="ValidPerplexity", simple_value=outputs['perplexity'])
+        summary = summary_pb2.Summary(value=[value])
+        summary_writer.add_summary(summary, i)
 
       outputs = run_epoch(session, mtest)
       print("Test Perplexity: %.3f" % outputs['perplexity'])
+      value = summary_pb2.Summary.Value(tag="TestPerplexity", simple_value=outputs['perplexity'])
+      summary = summary_pb2.Summary(value=[value])
+      summary_writer.add_summary(summary)
 
       if FLAGS.save_path:
         print("Saving model to %s." % FLAGS.save_path)
