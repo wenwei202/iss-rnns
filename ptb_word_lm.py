@@ -78,7 +78,7 @@ flags.DEFINE_string("save_path", '/tmp/ptb',
                     "Model output directory.")
 flags.DEFINE_bool("use_fp16", False,
                   "Train using 16-bit floats instead of 32bit floats")
-flags.DEFINE_float("weight_decay", 0.00001,
+flags.DEFINE_float("weight_decay", 0.0,
                   "Weight decay of L1 norm to learn sparsity")
 flags.DEFINE_string("regularizer", 'l1_regularizer',
                     "Regularizer type.")
@@ -416,7 +416,9 @@ def main(_):
     #summary_op = tf.summary.merge(summaries)
 
     sv = tf.train.Supervisor(logdir=FLAGS.save_path)
-    with sv.managed_session() as session:
+    config_proto = tf.ConfigProto()
+    config_proto.gpu_options.allow_growth = True
+    with sv.managed_session(config=config_proto) as session:
       for i in range(config.max_max_epoch):
         lr_decay = config.lr_decay ** max(i + 1 - config.max_epoch, 0.0)
         m.assign_lr(session, config.learning_rate * lr_decay)
