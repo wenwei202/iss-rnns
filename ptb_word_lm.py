@@ -65,6 +65,7 @@ from tensorflow.core.framework import summary_pb2
 
 import reader
 import importlib
+import os.path
 
 flags = tf.flags
 logging = tf.logging
@@ -76,6 +77,8 @@ flags.DEFINE_string("data_path", None,
                     "Where the training/test data is stored.")
 flags.DEFINE_string("save_path", '/tmp/ptb',
                     "Model output directory.")
+flags.DEFINE_string("restore_path", '/tmp/ptb',
+                    "Model input directory.")
 flags.DEFINE_bool("use_fp16", False,
                   "Train using 16-bit floats instead of 32bit floats")
 flags.DEFINE_float("weight_decay", 0.0,
@@ -375,6 +378,27 @@ def get_config():
   else:
     raise ValueError("Invalid model: %s", FLAGS.model)
 
+def restore_trainables(sess, path):
+  if path:
+    assert tf.gfile.Exists(path)
+    ckpt = tf.train.get_checkpoint_state(path)
+    if ckpt and ckpt.model_checkpoint_path:
+      variables_to_restore = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+      restorer = tf.train.Saver(variables_to_restore)
+      if os.path.isabs(ckpt.model_checkpoint_path):
+        restorer.restore(sess, ckpt.model_checkpoint_path)
+      else:
+        restorer.restore(sess, os.path.join(path,
+                                            ckpt.model_checkpoint_path))
+      print('Pre-trained model restored from %s' % path)
+    else:
+      print('Restoring pre-trained model from %s failed!' % path)
+      exit()
+
+def write_scalar_summary(summary_writer, tag, value, step):
+  value = summary_pb2.Summary.Value(tag=tag, simple_value=value)
+  summary = summary_pb2.Summary(value=[value])
+  summary_writer.add_summary(summary, step)
 
 def main(_):
   if not FLAGS.data_path:
@@ -412,54 +436,45 @@ def main(_):
         mtest = PTBModel(is_training=False, config=eval_config,
                          input_=test_input)
 
-    #summaries = tf.get_collection(tf.GraphKeys.SUMMARIES)
-    #summary_op = tf.summary.merge(summaries)
-
-    sv = tf.train.Supervisor(logdir=FLAGS.save_path)
+    saver = tf.train.Saver(tf.global_variables())
+    # Build an initialization operation to run below.
+    init = tf.global_variables_initializer()
     config_proto = tf.ConfigProto()
     config_proto.gpu_options.allow_growth = True
-    with sv.managed_session(config=config_proto) as session:
+    with tf.Session(config=config_proto) as session:
+      session.run(init)
+      tf.train.start_queue_runners(sess=session)
+      if FLAGS.restore_path:
+        restore_trainables(session, FLAGS.restore_path)
+        outputs = run_epoch(session, mvalid)
+        print("Restored model with Valid Perplexity: %.3f" % (outputs['perplexity']))
+
       for i in range(config.max_max_epoch):
         lr_decay = config.lr_decay ** max(i + 1 - config.max_epoch, 0.0)
         m.assign_lr(session, config.learning_rate * lr_decay)
+        write_scalar_summary(summary_writer, 'learning_rate', config.learning_rate * lr_decay, i+1)
 
         print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(m.lr)))
         outputs = run_epoch(session, m, eval_op=m.train_op,
                                      verbose=True)
         print("Epoch: %d Train Perplexity: %.3f   regularization: %.4f " % (i + 1, outputs['perplexity'], outputs['regularization']))
-        value = summary_pb2.Summary.Value(tag="TrainPerplexity", simple_value=outputs['perplexity'])
-        summary = summary_pb2.Summary(value=[value])
-        summary_writer.add_summary(summary, i)
-        value = summary_pb2.Summary.Value(tag="cross_entropy", simple_value=outputs['cross_entropy'])
-        summary = summary_pb2.Summary(value=[value])
-        summary_writer.add_summary(summary, i)
-        value = summary_pb2.Summary.Value(tag="regularization", simple_value=outputs['regularization'])
-        summary = summary_pb2.Summary(value=[value])
-        summary_writer.add_summary(summary, i)
-        value = summary_pb2.Summary.Value(tag="total_cost", simple_value=outputs['total_cost'])
-        summary = summary_pb2.Summary(value=[value])
-        summary_writer.add_summary(summary, i)
+        write_scalar_summary(summary_writer, 'TrainPerplexity', outputs['perplexity'], i + 1)
+        write_scalar_summary(summary_writer, 'cross_entropy', outputs['cross_entropy'], i + 1)
+        write_scalar_summary(summary_writer, 'regularization', outputs['regularization'], i + 1)
+        write_scalar_summary(summary_writer, 'total_cost', outputs['total_cost'], i + 1)
         for key, value in outputs['sparsity'].items():
-          value = summary_pb2.Summary.Value(tag=key, simple_value=value)
-          summary = summary_pb2.Summary(value=[value])
-          summary_writer.add_summary(summary, i)
+          write_scalar_summary(summary_writer, key, value, i + 1)
+
+        checkpoint_path = os.path.join(FLAGS.save_path, 'model.ckpt')
+        saver.save(session, checkpoint_path, global_step=i + 1)
 
         outputs = run_epoch(session, mvalid)
         print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, outputs['perplexity']))
-        value = summary_pb2.Summary.Value(tag="ValidPerplexity", simple_value=outputs['perplexity'])
-        summary = summary_pb2.Summary(value=[value])
-        summary_writer.add_summary(summary, i)
+        write_scalar_summary(summary_writer, 'ValidPerplexity', outputs['perplexity'], i + 1)
 
       outputs = run_epoch(session, mtest)
       print("Test Perplexity: %.3f" % outputs['perplexity'])
-      value = summary_pb2.Summary.Value(tag="TestPerplexity", simple_value=outputs['perplexity'])
-      summary = summary_pb2.Summary(value=[value])
-      summary_writer.add_summary(summary)
-
-      if FLAGS.save_path:
-        print("Saving model to %s." % FLAGS.save_path)
-        sv.saver.save(session, FLAGS.save_path, global_step=sv.global_step)
-
+      write_scalar_summary(summary_writer, 'TestPerplexity', outputs['perplexity'], 0)
 
 if __name__ == "__main__":
   tf.app.run()
