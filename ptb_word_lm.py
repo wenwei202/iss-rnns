@@ -77,7 +77,7 @@ flags.DEFINE_string("data_path", None,
                     "Where the training/test data is stored.")
 flags.DEFINE_string("save_path", '/tmp/ptb',
                     "Model output directory.")
-flags.DEFINE_string("restore_path", '/tmp/ptb',
+flags.DEFINE_string("restore_path", None,
                     "Model input directory.")
 flags.DEFINE_bool("use_fp16", False,
                   "Train using 16-bit floats instead of 32bit floats")
