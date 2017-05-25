@@ -72,7 +72,7 @@ logging = tf.logging
 
 flags.DEFINE_string(
     "model", "small",
-    "A type of model. Possible options are: small, medium, large.")
+    "A type of model. Possible options are: small, medium, large, sparselarge.")
 flags.DEFINE_string("data_path", None,
                     "Where the training/test data is stored.")
 flags.DEFINE_string("save_path", '/tmp/ptb',
@@ -85,6 +85,8 @@ flags.DEFINE_float("weight_decay", 0.0,
                   "Weight decay of L1 norm to learn sparsity")
 flags.DEFINE_string("regularizer", 'l1_regularizer',
                     "Regularizer type.")
+flags.DEFINE_string("optimizer", 'gd',
+                    "Optimizer of sgd: gd and adam.")
 
 FLAGS = flags.FLAGS
 
@@ -206,7 +208,14 @@ class PTBModel(object):
     tvars = tf.trainable_variables()
     grads, _ = tf.clip_by_global_norm(tf.gradients(cost + reg_loss, tvars),
                                       config.max_grad_norm)
-    optimizer = tf.train.GradientDescentOptimizer(self._lr)
+
+    if 'gd' == FLAGS.optimizer:
+      optimizer = tf.train.GradientDescentOptimizer(self._lr)
+    elif 'adam' == FLAGS.optimizer:
+      optimizer = tf.train.AdamOptimizer(self._lr)
+    else:
+      raise ValueError("Wrong optimizer!")
+
     self._train_op = optimizer.apply_gradients(
         zip(grads, tvars),
         global_step=tf.contrib.framework.get_or_create_global_step())
@@ -298,6 +307,20 @@ class LargeConfig(object):
   batch_size = 20
   vocab_size = 10000
 
+class SparseLargeConfig(object):
+  """Sparse Large config."""
+  init_scale = 0.04
+  learning_rate = 1.0 / 10.0
+  max_grad_norm = 10
+  num_layers = 2
+  num_steps = 35
+  hidden_size = 1500
+  max_epoch = 14
+  max_max_epoch = 55
+  keep_prob = 0.35 # ???
+  lr_decay = 0.1
+  batch_size = 20
+  vocab_size = 10000
 
 class TestConfig(object):
   """Tiny config, for testing."""
@@ -373,6 +396,8 @@ def get_config():
     return MediumConfig()
   elif FLAGS.model == "large":
     return LargeConfig()
+  elif FLAGS.model == "sparselarge":
+    return SparseLargeConfig()
   elif FLAGS.model == "test":
     return TestConfig()
   else:
@@ -450,7 +475,13 @@ def main(_):
         print("Restored model with Valid Perplexity: %.3f" % (outputs['perplexity']))
 
       for i in range(config.max_max_epoch):
-        lr_decay = config.lr_decay ** max(i + 1 - config.max_epoch, 0.0)
+        if 'gd' == FLAGS.optimizer:
+          # lr_decay = config.lr_decay ** max(i + 1 - config.max_epoch, 0.0)
+          lr_decay = config.lr_decay ** ( i // (config.max_max_epoch//3) )
+        elif 'adam' == FLAGS.optimizer:
+          lr_decay = 1.0
+        else:
+          raise ValueError("Wrong optimizer!")
         m.assign_lr(session, config.learning_rate * lr_decay)
         write_scalar_summary(summary_writer, 'learning_rate', config.learning_rate * lr_decay, i+1)
 
