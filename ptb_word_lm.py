@@ -466,9 +466,10 @@ def main(_):
     init = tf.global_variables_initializer()
     config_proto = tf.ConfigProto()
     config_proto.gpu_options.allow_growth = True
+    coord = tf.train.Coordinator()
     with tf.Session(config=config_proto) as session:
       session.run(init)
-      tf.train.start_queue_runners(sess=session)
+      threads = tf.train.start_queue_runners(sess=session, coord=coord)
       if FLAGS.restore_path:
         restore_trainables(session, FLAGS.restore_path)
         outputs = run_epoch(session, mvalid)
@@ -506,6 +507,9 @@ def main(_):
       outputs = run_epoch(session, mtest)
       print("Test Perplexity: %.3f" % outputs['perplexity'])
       write_scalar_summary(summary_writer, 'TestPerplexity', outputs['perplexity'], 0)
+
+    coord.request_stop()
+    coord.join(threads)
 
 if __name__ == "__main__":
   tf.app.run()
