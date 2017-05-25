@@ -421,7 +421,7 @@ def restore_trainables(sess, path):
       exit()
 
 def write_scalar_summary(summary_writer, tag, value, step):
-  value = summary_pb2.Summary.Value(tag=tag, simple_value=value)
+  value = summary_pb2.Summary.Value(tag=tag, simple_value=float(value))
   summary = summary_pb2.Summary(value=[value])
   summary_writer.add_summary(summary, step)
 
