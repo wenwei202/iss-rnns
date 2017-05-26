@@ -310,7 +310,7 @@ class LargeConfig(object):
 class SparseLargeConfig(object):
   """Sparse Large config."""
   init_scale = 0.04
-  learning_rate = 1.0 / 10.0
+  learning_rate = 1.0
   max_grad_norm = 10
   num_layers = 2
   num_steps = 35
