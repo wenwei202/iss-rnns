@@ -83,6 +83,8 @@ flags.DEFINE_bool("use_fp16", False,
                   "Train using 16-bit floats instead of 32bit floats")
 flags.DEFINE_float("weight_decay", 0.0,
                   "Weight decay of L1 norm to learn sparsity")
+flags.DEFINE_float("dropout_keep", 0.45,
+                  "The ratio of kept neurons in dropout")
 flags.DEFINE_string("regularizer", 'l1_regularizer',
                     "Regularizer type.")
 flags.DEFINE_string("optimizer", 'gd',
@@ -317,7 +319,7 @@ class SparseLargeConfig(object):
   hidden_size = 1500
   max_epoch = 14
   max_max_epoch = 55
-  keep_prob = 0.35 # ???
+  keep_prob = FLAGS.dropout_keep
   lr_decay = 0.1
   batch_size = 20
   vocab_size = 10000
