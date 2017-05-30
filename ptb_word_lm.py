@@ -72,7 +72,7 @@ logging = tf.logging
 
 flags.DEFINE_string(
     "model", "small",
-    "A type of model. Possible options are: small, medium, large, sparselarge.")
+    "A type of model. Possible options are: small, medium, large, sparselarge, validtestlarge.")
 flags.DEFINE_string("data_path", None,
                     "Where the training/test data is stored.")
 flags.DEFINE_string("save_path", '/tmp/ptb',
@@ -92,6 +92,9 @@ flags.DEFINE_string("optimizer", 'gd',
 
 FLAGS = flags.FLAGS
 
+def plot_tensor(t):
+  
+  pass
 
 def data_type():
   return tf.float16 if FLAGS.use_fp16 else tf.float32
@@ -192,7 +195,8 @@ class PTBModel(object):
       for train_var in tf.trainable_variables():
         # zerout by small threshold to stablize the sparsity
         sp_name = train_var.op.name + '_sparsity'
-        where_cond = tf.less(tf.abs(train_var), 0.0001)
+        threshold = max(0.0001, 2*FLAGS.weight_decay)
+        where_cond = tf.less(tf.abs(train_var), threshold)
         train_var = tf.assign(train_var, tf.where(where_cond,
                                                   tf.zeros(tf.shape(train_var)),
                                                   train_var))
@@ -324,6 +328,21 @@ class SparseLargeConfig(object):
   batch_size = 20
   vocab_size = 10000
 
+class ValidTestLargeConfig(object):
+  """Large config."""
+  init_scale = 0.04
+  learning_rate = 0.0
+  max_grad_norm = 10
+  num_layers = 2
+  num_steps = 35
+  hidden_size = 1500
+  max_epoch = 0
+  max_max_epoch = 0
+  keep_prob = 1.0
+  lr_decay = 1.0
+  batch_size = 20
+  vocab_size = 10000
+
 class TestConfig(object):
   """Tiny config, for testing."""
   init_scale = 0.1
@@ -400,6 +419,8 @@ def get_config():
     return LargeConfig()
   elif FLAGS.model == "sparselarge":
     return SparseLargeConfig()
+  elif FLAGS.model == 'validtestlarge':
+    return ValidTestLargeConfig()
   elif FLAGS.model == "test":
     return TestConfig()
   else:
