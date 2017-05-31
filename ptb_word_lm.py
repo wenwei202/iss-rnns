@@ -66,6 +66,7 @@ from tensorflow.core.framework import summary_pb2
 import reader
 import importlib
 import os.path
+import matplotlib.pyplot as plt
 
 flags = tf.flags
 logging = tf.logging
@@ -92,9 +93,16 @@ flags.DEFINE_string("optimizer", 'gd',
 
 FLAGS = flags.FLAGS
 
-def plot_tensor(t):
-  
-  pass
+def plot_tensor(t,title):
+  plt.figure()
+  t = (t!=0)
+  weight_scope = abs(t).max()
+  plt.imshow(t.reshape((t.shape[0],-1)),
+             vmin=-weight_scope,
+             vmax=weight_scope,
+             cmap=plt.get_cmap('binary'),
+             interpolation='none')
+  plt.title(title)
 
 def data_type():
   return tf.float16 if FLAGS.use_fp16 else tf.float32
@@ -489,8 +497,8 @@ def main(_):
     init = tf.global_variables_initializer()
     config_proto = tf.ConfigProto()
     config_proto.gpu_options.allow_growth = True
-    coord = tf.train.Coordinator()
     with tf.Session(config=config_proto) as session:
+      coord = tf.train.Coordinator()
       session.run(init)
       threads = tf.train.start_queue_runners(sess=session, coord=coord)
       if FLAGS.restore_path:
@@ -531,8 +539,13 @@ def main(_):
       print("Test Perplexity: %.3f" % outputs['perplexity'])
       write_scalar_summary(summary_writer, 'TestPerplexity', outputs['perplexity'], 0)
 
-    coord.request_stop()
-    coord.join(threads)
+      print("Sparsity: %s" % outputs['sparsity'])
+      for train_var in tf.trainable_variables():
+        plot_tensor(train_var.eval(), train_var.op.name)
+
+      coord.request_stop()
+      coord.join(threads)
+  plt.show()
 
 if __name__ == "__main__":
   tf.app.run()
