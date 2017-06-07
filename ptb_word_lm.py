@@ -58,7 +58,7 @@ from __future__ import print_function
 
 import inspect
 import time
-
+import pylab
 import numpy as np
 import tensorflow as tf
 from tensorflow.core.framework import summary_pb2
@@ -82,6 +82,8 @@ flags.DEFINE_string("restore_path", None,
                     "Model input directory.")
 flags.DEFINE_bool("use_fp16", False,
                   "Train using 16-bit floats instead of 32bit floats")
+flags.DEFINE_bool("display_weights", False,
+                  "Display weight matrix.")
 flags.DEFINE_float("weight_decay", 0.0,
                   "Weight decay of L1 norm to learn sparsity")
 flags.DEFINE_float("dropout_keep", 0.45,
@@ -94,15 +96,49 @@ flags.DEFINE_string("optimizer", 'gd',
 FLAGS = flags.FLAGS
 
 def plot_tensor(t,title):
-  plt.figure()
-  t = (t!=0)
-  weight_scope = abs(t).max()
-  plt.imshow(t.reshape((t.shape[0],-1)),
-             vmin=-weight_scope,
-             vmax=weight_scope,
-             cmap=plt.get_cmap('binary'),
-             interpolation='none')
-  plt.title(title)
+  if len(t.shape)==2:
+    print(title)
+    col_zero_idx = np.sum(np.abs(t), axis=0) == 0
+    row_zero_idx = np.sum(np.abs(t), axis=1) == 0
+    col_sparsity = (' column sparsity: %d/%d' % (sum(col_zero_idx), t.shape[1]) )
+    row_sparsity = (' row sparsity: %d/%d' % (sum(row_zero_idx), t.shape[0]) )
+
+    plt.figure()
+
+    t = (t != 0)
+    weight_scope = abs(t).max()
+    plt.subplot(3, 1, 1)
+    plt.imshow(t.reshape((t.shape[0], -1)),
+               vmin=-weight_scope,
+               vmax=weight_scope,
+               cmap=plt.get_cmap('binary'),
+               interpolation='none')
+    plt.title(title)
+
+    col_zero_map = np.tile(col_zero_idx, (t.shape[0], 1))
+    row_zero_map = np.tile(row_zero_idx.reshape((t.shape[0], 1)), (1, t.shape[1]))
+    zero_map = col_zero_map + row_zero_map
+    zero_map_cp = zero_map.copy()
+    plt.subplot(3,1,2)
+    plt.imshow(zero_map_cp,cmap=plt.get_cmap('gray'),interpolation='none')
+    plt.title(col_sparsity + row_sparsity)
+
+    if 2*t.shape[0] == t.shape[1]:
+      subsize = int(t.shape[0]/2)
+      match_map = np.zeros(subsize,dtype=np.int)
+      match_map = match_map + row_zero_idx[subsize:2 * subsize]
+      for blk in range(0,4):
+        match_map = match_map + col_zero_idx[blk*subsize : blk*subsize+subsize]
+      match_idx = np.where(match_map == 5)[0]
+      zero_map[subsize+match_idx,:] = False
+      for blk in range(0, 4):
+        zero_map[:,blk*subsize+match_idx] = False
+      plt.subplot(3, 1, 3)
+      plt.imshow(zero_map, cmap=plt.get_cmap('Reds'), interpolation='none')
+      plt.title(' %d/%d matches' % (len(match_idx), sum(row_zero_idx[subsize:subsize*2])))
+  else:
+    print ('ignoring %s' % title)
+
 
 def data_type():
   return tf.float16 if FLAGS.use_fp16 else tf.float32
@@ -366,6 +402,24 @@ class TestConfig(object):
   batch_size = 20
   vocab_size = 10000
 
+def fetch_sparsity(session, model, eval_op=None, verbose=False):
+  outputs = {}
+  state = session.run(model.initial_state)
+
+  fetches = {
+      "sparsity": model.sparsity
+  }
+
+  feed_dict = {}
+  for i, (c, h) in enumerate(model.initial_state):
+    feed_dict[c] = state[i].c
+    feed_dict[h] = state[i].h
+
+  vals = session.run(fetches, feed_dict)
+  sparsity = vals["sparsity"]
+  outputs['sparsity'] = sparsity
+  return outputs
+
 
 def run_epoch(session, model, eval_op=None, verbose=False):
   """Runs the model on the given data."""
@@ -503,6 +557,13 @@ def main(_):
       threads = tf.train.start_queue_runners(sess=session, coord=coord)
       if FLAGS.restore_path:
         restore_trainables(session, FLAGS.restore_path)
+        if FLAGS.display_weights:
+          outputs = fetch_sparsity(session, mtest)
+          print("Sparsity: %s" % outputs['sparsity'])
+          for train_var in tf.trainable_variables():
+            plot_tensor(train_var.eval(), train_var.op.name)
+          plt.show()
+
         outputs = run_epoch(session, mvalid)
         print("Restored model with Valid Perplexity: %.3f" % (outputs['perplexity']))
 
@@ -538,10 +599,6 @@ def main(_):
       outputs = run_epoch(session, mtest)
       print("Test Perplexity: %.3f" % outputs['perplexity'])
       write_scalar_summary(summary_writer, 'TestPerplexity', outputs['perplexity'], 0)
-
-      print("Sparsity: %s" % outputs['sparsity'])
-      for train_var in tf.trainable_variables():
-        plot_tensor(train_var.eval(), train_var.op.name)
 
       coord.request_stop()
       coord.join(threads)
