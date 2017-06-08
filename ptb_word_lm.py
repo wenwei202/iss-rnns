@@ -59,6 +59,7 @@ from __future__ import print_function
 import inspect
 import time
 import pylab
+import json
 import numpy as np
 import tensorflow as tf
 from tensorflow.core.framework import summary_pb2
@@ -70,6 +71,7 @@ import matplotlib.pyplot as plt
 
 flags = tf.flags
 logging = tf.logging
+zero_threshold = 0.0001
 
 flags.DEFINE_string(
     "model", "small",
@@ -80,6 +82,8 @@ flags.DEFINE_string("save_path", '/tmp/ptb',
                     "Model output directory.")
 flags.DEFINE_string("restore_path", None,
                     "Model input directory.")
+flags.DEFINE_string("config_file", None,
+                    "Parameter config file.")
 flags.DEFINE_bool("use_fp16", False,
                   "Train using 16-bit floats instead of 32bit floats")
 flags.DEFINE_bool("display_weights", False,
@@ -94,6 +98,37 @@ flags.DEFINE_string("optimizer", 'gd',
                     "Optimizer of sgd: gd and adam.")
 
 FLAGS = flags.FLAGS
+
+def add_blockwise_grouplasso(t, block_row_size, block_col_size):
+  raise NotImplementedError('Not debugged. And the implementation is very slow when block is small.')
+  with tf.name_scope("GroupLasso"):
+    t = tf.expand_dims(tf.expand_dims(t,0),-1)
+    blocks = tf.extract_image_patches(t,
+                ksizes=[1, block_row_size, block_col_size, 1],
+                strides=[1, block_row_size, block_col_size, 1],
+                rates=[1, 1, 1, 1],
+                padding='VALID')
+    reg_sum = tf.constant(0.0)
+    zero_blocks = 0.0
+    total_blocks = 0.0
+    blocks = tf.unstack(blocks) # list of 3-D tensors
+    for b in blocks: # for each 3-D tensor
+      for bb in tf.unstack(b): # for each 2-D tensor
+        for block in tf.unstack(bb): # for each block
+          blk_len = tf.sqrt(tf.reduce_sum(tf.square(block)))
+          reg_sum = reg_sum + tf.cond(blk_len < zero_threshold,
+                                      lambda: tf.constant(0.0),
+                                      lambda: blk_len)
+
+          # set them to zeros and calculate sparsity
+          #block = tf.assign(block, tf.cond(blk_len < zero_threshold,
+          #                                 lambda: tf.zeros_like(block),
+          #                                 lambda: block))
+          zero_blocks = zero_blocks + tf.cond( tf.equal(tf.reduce_sum(tf.square(block)), 0.0),
+                                      lambda: tf.constant(1.0),
+                                      lambda: tf.constant(0.0))
+          total_blocks = total_blocks + 1.0
+    return reg_sum, zero_blocks/total_blocks
 
 def plot_tensor(t,title):
   if len(t.shape)==2:
@@ -158,8 +193,9 @@ class PTBInput(object):
 class PTBModel(object):
   """The PTB model."""
 
-  def __init__(self, is_training, config, input_):
+  def __init__(self, is_training, config, input_, config_params = None):
     self._input = input_
+    self.config_params = config_params
 
     batch_size = input_.batch_size
     num_steps = input_.num_steps
@@ -234,12 +270,37 @@ class PTBModel(object):
     self._regularization = reg_loss
 
     sparsity = {}
+
+    # Group Lasso regularization
+    if config_params:
+      glasso_params = config_params.get('grouplasso', None)
+    else:
+      glasso_params = None
+
+    if glasso_params:
+      for train_var in tf.trainable_variables():
+        var_name = train_var.op.name
+        glasso_param = glasso_params.get(var_name,None)
+        if glasso_param:
+          count = 0
+          for decay, decay_multi, block_row_size, block_col_size in zip(glasso_params['decay'],
+                                                                        glasso_param['decay_multi'],
+                                                                        glasso_param['block_row_size'],
+                                                                        glasso_param['block_col_size']):
+            glasso_reg, blk_sparsity = add_blockwise_grouplasso(train_var,
+                                                    block_row_size,
+                                                    block_col_size)
+            self._regularization = self._regularization + glasso_reg*decay*decay_multi
+            sparsity[var_name+'blk_sparsity_%d'%count] = blk_sparsity
+            count += 1
+
+
     if FLAGS.weight_decay > 0:
       # sparsity statistcis
       for train_var in tf.trainable_variables():
         # zerout by small threshold to stablize the sparsity
-        sp_name = train_var.op.name + '_sparsity'
-        threshold = max(0.0001, 2*FLAGS.weight_decay)
+        sp_name = train_var.op.name + '_elt_sparsity'
+        threshold = max(zero_threshold, 2*FLAGS.weight_decay)
         where_cond = tf.less(tf.abs(train_var), threshold)
         train_var = tf.assign(train_var, tf.where(where_cond,
                                                   tf.zeros(tf.shape(train_var)),
@@ -256,7 +317,7 @@ class PTBModel(object):
 
     self._lr = tf.Variable(0.0, trainable=False)
     tvars = tf.trainable_variables()
-    grads, _ = tf.clip_by_global_norm(tf.gradients(cost + reg_loss, tvars),
+    grads, _ = tf.clip_by_global_norm(tf.gradients(cost + self._regularization, tvars),
                                       config.max_grad_norm)
 
     if 'gd' == FLAGS.optimizer:
@@ -522,10 +583,13 @@ def main(_):
   eval_config.batch_size = 1
   eval_config.num_steps = 1
 
-  with tf.Graph().as_default():
+  if FLAGS.config_file:
+    with open(FLAGS.config_file, 'r') as fi:
+      config_params = json.load(fi)
+  else:
+    config_params = None
 
-    summary_writer = tf.summary.FileWriter(
-      FLAGS.save_path)
+  with tf.Graph().as_default():
 
     initializer = tf.random_uniform_initializer(-config.init_scale,
                                                 config.init_scale)
@@ -533,7 +597,7 @@ def main(_):
     with tf.name_scope("Train"):
       train_input = PTBInput(config=config, data=train_data, name="TrainInput")
       with tf.variable_scope("Model", reuse=None, initializer=initializer):
-        m = PTBModel(is_training=True, config=config, input_=train_input)
+        m = PTBModel(is_training=True, config=config, input_=train_input, config_params=config_params)
 
     with tf.name_scope("Valid"):
       valid_input = PTBInput(config=config, data=valid_data, name="ValidInput")
@@ -551,6 +615,7 @@ def main(_):
     init = tf.global_variables_initializer()
     config_proto = tf.ConfigProto()
     config_proto.gpu_options.allow_growth = True
+    config_proto.log_device_placement = True
     with tf.Session(config=config_proto) as session:
       coord = tf.train.Coordinator()
       session.run(init)
@@ -566,6 +631,10 @@ def main(_):
 
         outputs = run_epoch(session, mvalid)
         print("Restored model with Valid Perplexity: %.3f" % (outputs['perplexity']))
+
+      summary_writer = tf.summary.FileWriter(
+        FLAGS.save_path,
+        graph=tf.get_default_graph())
 
       for i in range(config.max_max_epoch):
         if 'gd' == FLAGS.optimizer:
