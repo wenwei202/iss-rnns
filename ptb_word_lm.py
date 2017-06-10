@@ -99,9 +99,18 @@ flags.DEFINE_string("optimizer", 'gd',
 
 FLAGS = flags.FLAGS
 
+def add_dimen_grouplasso(var, axis=0):
+  with tf.name_scope("DimenGroupLasso"):
+    t = tf.square(var)
+    t = tf.reduce_sum(t, axis=axis) + tf.constant(1.0e-8)
+    t = tf.sqrt(t)
+    reg = tf.reduce_sum(t)
+    return reg
+
+
 def add_blockwise_grouplasso(t, block_row_size, block_col_size):
   raise NotImplementedError('Not debugged. And the implementation is very slow when block is small.')
-  with tf.name_scope("GroupLasso"):
+  with tf.name_scope("BlockGroupLasso"):
     t = tf.expand_dims(tf.expand_dims(t,0),-1)
     blocks = tf.extract_image_patches(t,
                 ksizes=[1, block_row_size, block_col_size, 1],
@@ -115,7 +124,7 @@ def add_blockwise_grouplasso(t, block_row_size, block_col_size):
     for b in blocks: # for each 3-D tensor
       for bb in tf.unstack(b): # for each 2-D tensor
         for block in tf.unstack(bb): # for each block
-          blk_len = tf.sqrt(tf.reduce_sum(tf.square(block)))
+          blk_len = tf.sqrt(tf.reduce_sum(tf.square(block))) + tf.constant(1.0e-8)
           reg_sum = reg_sum + tf.cond(blk_len < zero_threshold,
                                       lambda: tf.constant(0.0),
                                       lambda: blk_len)
@@ -282,31 +291,29 @@ class PTBModel(object):
         var_name = train_var.op.name
         glasso_param = glasso_params.get(var_name,None)
         if glasso_param:
-          count = 0
-          for decay, decay_multi, block_row_size, block_col_size in zip(glasso_params['decay'],
-                                                                        glasso_param['decay_multi'],
-                                                                        glasso_param['block_row_size'],
-                                                                        glasso_param['block_col_size']):
-            glasso_reg, blk_sparsity = add_blockwise_grouplasso(train_var,
-                                                    block_row_size,
-                                                    block_col_size)
-            self._regularization = self._regularization + glasso_reg*decay*decay_multi
-            sparsity[var_name+'blk_sparsity_%d'%count] = blk_sparsity
-            count += 1
+          glasso_reg = add_dimen_grouplasso(train_var, axis=0)
+          self._regularization = self._regularization + glasso_reg * glasso_params['global_decay'] * glasso_param['col_decay_multi']
+          glasso_reg = add_dimen_grouplasso(train_var, axis=1)
+          self._regularization = self._regularization + glasso_reg*glasso_params['global_decay']*glasso_param['row_decay_multi']
 
-
-    if FLAGS.weight_decay > 0:
+    if FLAGS.weight_decay > 0 or glasso_params:
       # sparsity statistcis
       for train_var in tf.trainable_variables():
         # zerout by small threshold to stablize the sparsity
-        sp_name = train_var.op.name + '_elt_sparsity'
+        sp_name = train_var.op.name
         threshold = max(zero_threshold, 2*FLAGS.weight_decay)
         where_cond = tf.less(tf.abs(train_var), threshold)
         train_var = tf.assign(train_var, tf.where(where_cond,
                                                   tf.zeros(tf.shape(train_var)),
                                                   train_var))
+        # statistics
         s = tf.nn.zero_fraction(train_var)
-        sparsity[sp_name] = s
+        sparsity[sp_name + '_elt_sparsity'] = s
+        if glasso_params and glasso_params.get(sp_name,None):
+          s = tf.nn.zero_fraction(tf.reduce_sum(tf.square(train_var), axis=0))
+          sparsity[sp_name + '_col_sparsity'] = s
+          s = tf.nn.zero_fraction(tf.reduce_sum(tf.square(train_var), axis=1))
+          sparsity[sp_name + '_row_sparsity'] = s
     self._sparsity = sparsity
 
     self._cost = cost = tf.reduce_sum(loss) / batch_size
@@ -465,18 +472,12 @@ class TestConfig(object):
 
 def fetch_sparsity(session, model, eval_op=None, verbose=False):
   outputs = {}
-  state = session.run(model.initial_state)
 
   fetches = {
       "sparsity": model.sparsity
   }
 
-  feed_dict = {}
-  for i, (c, h) in enumerate(model.initial_state):
-    feed_dict[c] = state[i].c
-    feed_dict[h] = state[i].h
-
-  vals = session.run(fetches, feed_dict)
+  vals = session.run(fetches)
   sparsity = vals["sparsity"]
   outputs['sparsity'] = sparsity
   return outputs
@@ -495,7 +496,6 @@ def run_epoch(session, model, eval_op=None, verbose=False):
   fetches = {
       "cost": model.cost,
       "regularization": model.regularization,
-      "sparsity": model.sparsity,
       "final_state": model.final_state,
   }
   if eval_op is not None:
@@ -513,7 +513,7 @@ def run_epoch(session, model, eval_op=None, verbose=False):
 
     costs += cost
     regularizations += vals["regularization"]
-    sparsity = vals["sparsity"]
+    sparsity = session.run(model.sparsity)
     iters += model.input.num_steps
 
     if verbose and step % (model.input.epoch_size // 10) == 10:
@@ -615,7 +615,7 @@ def main(_):
     init = tf.global_variables_initializer()
     config_proto = tf.ConfigProto()
     config_proto.gpu_options.allow_growth = True
-    config_proto.log_device_placement = True
+    config_proto.log_device_placement = False
     with tf.Session(config=config_proto) as session:
       coord = tf.train.Coordinator()
       session.run(init)
