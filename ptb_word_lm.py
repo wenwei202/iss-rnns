@@ -60,9 +60,11 @@ import inspect
 import time
 import pylab
 import json
+import logging
 import numpy as np
 import tensorflow as tf
 from tensorflow.core.framework import summary_pb2
+from time import gmtime, strftime
 
 import reader
 import importlib
@@ -70,7 +72,6 @@ import os.path
 import matplotlib.pyplot as plt
 
 flags = tf.flags
-logging = tf.logging
 zero_threshold = 0.0001
 
 flags.DEFINE_string(
@@ -78,8 +79,6 @@ flags.DEFINE_string(
     "A type of model. Possible options are: small, medium, large, sparselarge, validtestlarge.")
 flags.DEFINE_string("data_path", None,
                     "Where the training/test data is stored.")
-flags.DEFINE_string("save_path", '/tmp/ptb',
-                    "Model output directory.")
 flags.DEFINE_string("restore_path", None,
                     "Model input directory.")
 flags.DEFINE_string("config_file", None,
@@ -88,10 +87,6 @@ flags.DEFINE_bool("use_fp16", False,
                   "Train using 16-bit floats instead of 32bit floats")
 flags.DEFINE_bool("display_weights", False,
                   "Display weight matrix.")
-flags.DEFINE_float("weight_decay", 0.0,
-                  "Weight decay of L1 norm to learn sparsity")
-flags.DEFINE_float("dropout_keep", 0.45,
-                  "The ratio of kept neurons in dropout")
 flags.DEFINE_string("regularizer", 'l1_regularizer',
                     "Regularizer type.")
 flags.DEFINE_string("optimizer", 'gd',
@@ -274,7 +269,7 @@ class PTBModel(object):
 
     # L1 regularization
     modname = importlib.import_module('tensorflow.contrib.layers')
-    the_regularizer = getattr(modname, FLAGS.regularizer)(scale=FLAGS.weight_decay, scope=FLAGS.regularizer)
+    the_regularizer = getattr(modname, FLAGS.regularizer)(scale=config_params['weight_decay'], scope=FLAGS.regularizer)
     reg_loss = tf.contrib.layers.apply_regularization(the_regularizer, tf.trainable_variables()[1:])
     self._regularization = reg_loss
 
@@ -296,12 +291,12 @@ class PTBModel(object):
           glasso_reg = add_dimen_grouplasso(train_var, axis=1)
           self._regularization = self._regularization + glasso_reg*glasso_params['global_decay']*glasso_param['row_decay_multi']
 
-    if FLAGS.weight_decay > 0 or glasso_params:
+    if config_params['weight_decay'] > 0 or glasso_params:
       # sparsity statistcis
       for train_var in tf.trainable_variables():
         # zerout by small threshold to stablize the sparsity
         sp_name = train_var.op.name
-        threshold = max(zero_threshold, 2*FLAGS.weight_decay)
+        threshold = max(zero_threshold, 2*config_params['weight_decay'])
         where_cond = tf.less(tf.abs(train_var), threshold)
         train_var = tf.assign(train_var, tf.where(where_cond,
                                                   tf.zeros(tf.shape(train_var)),
@@ -380,95 +375,101 @@ class PTBModel(object):
 
 class SmallConfig(object):
   """Small config."""
-  init_scale = 0.1
-  learning_rate = 1.0
-  max_grad_norm = 5
-  num_layers = 2
-  num_steps = 20
-  hidden_size = 200
-  max_epoch = 4
-  max_max_epoch = 13
-  keep_prob = 1.0
-  lr_decay = 0.5
-  batch_size = 20
-  vocab_size = 10000
+  def __init__(self):
+    self.init_scale = 0.1
+    self.learning_rate = 1.0
+    self.max_grad_norm = 5
+    self.num_layers = 2
+    self.num_steps = 20
+    self.hidden_size = 200
+    self.max_epoch = 4
+    self.max_max_epoch = 13
+    self.keep_prob = 1.0
+    self.lr_decay = 0.5
+    self.batch_size = 20
+    self.vocab_size = 10000
 
 
 class MediumConfig(object):
   """Medium config."""
-  init_scale = 0.05
-  learning_rate = 1.0
-  max_grad_norm = 5
-  num_layers = 2
-  num_steps = 35
-  hidden_size = 650
-  max_epoch = 6
-  max_max_epoch = 39
-  keep_prob = 0.5
-  lr_decay = 0.8
-  batch_size = 20
-  vocab_size = 10000
+  def __init__(self):
+    self.init_scale = 0.05
+    self.learning_rate = 1.0
+    self.max_grad_norm = 5
+    self.num_layers = 2
+    self.num_steps = 35
+    self.hidden_size = 650
+    self.max_epoch = 6
+    self.max_max_epoch = 39
+    self.keep_prob = 0.5
+    self.lr_decay = 0.8
+    self.batch_size = 20
+    self.vocab_size = 10000
 
 
 class LargeConfig(object):
   """Large config."""
-  init_scale = 0.04
-  learning_rate = 1.0
-  max_grad_norm = 10
-  num_layers = 2
-  num_steps = 35
-  hidden_size = 1500
-  max_epoch = 14
-  max_max_epoch = 55
-  keep_prob = 0.35
-  lr_decay = 1 / 1.15
-  batch_size = 20
-  vocab_size = 10000
+  def __init__(self):
+    self.init_scale = 0.04
+    self.learning_rate = 1.0
+    self.max_grad_norm = 10
+    self.num_layers = 2
+    self.num_steps = 35
+    self.hidden_size = 1500
+    self.max_epoch = 14
+    self.max_max_epoch = 55
+    self.keep_prob = 0.35
+    self.lr_decay = 1 / 1.15
+    self.batch_size = 20
+    self.vocab_size = 10000
 
 class SparseLargeConfig(object):
   """Sparse Large config."""
-  init_scale = 0.04
-  learning_rate = 1.0
-  max_grad_norm = 10
-  num_layers = 2
-  num_steps = 35
-  hidden_size = 1500
-  max_epoch = 14
-  max_max_epoch = 55
-  keep_prob = FLAGS.dropout_keep
-  lr_decay = 0.1
-  batch_size = 20
-  vocab_size = 10000
+  def __init__(self):
+    self.init_scale = 0.04
+    self.learning_rate = 1.0
+    self.max_grad_norm = 10
+    self.num_layers = 2
+    self.num_steps = 35
+    self.hidden_size = 1500
+    self.max_epoch = 14
+    self.max_max_epoch = 55
+    self.keep_prob = 0.60
+    self.lr_decay = 0.1
+    self.batch_size = 20
+    self.vocab_size = 10000
 
 class ValidTestLargeConfig(object):
   """Large config."""
-  init_scale = 0.04
-  learning_rate = 0.0
-  max_grad_norm = 10
-  num_layers = 2
-  num_steps = 35
-  hidden_size = 1500
-  max_epoch = 0
-  max_max_epoch = 0
-  keep_prob = 1.0
-  lr_decay = 1.0
-  batch_size = 20
-  vocab_size = 10000
+  def __init__(self):
+    self.init_scale = 0.04
+    self.learning_rate = 0.0
+    self.max_grad_norm = 10
+    self.num_layers = 2
+    self.num_steps = 35
+    self.hidden_size = 1500
+    self.max_epoch = 0
+    self.max_max_epoch = 0
+    self.keep_prob = 1.0
+    self.lr_decay = 1.0
+    self.batch_size = 20
+    self.vocab_size = 10000
 
 class TestConfig(object):
   """Tiny config, for testing."""
-  init_scale = 0.1
-  learning_rate = 1.0
-  max_grad_norm = 1
-  num_layers = 1
-  num_steps = 2
-  hidden_size = 2
-  max_epoch = 1
-  max_max_epoch = 1
-  keep_prob = 1.0
-  lr_decay = 0.5
-  batch_size = 20
-  vocab_size = 10000
+  def __init__(self):
+    self.init_scale = 0.1
+    self.learning_rate = 1.0
+    self.max_grad_norm = 1
+    self.num_layers = 1
+    self.num_steps = 2
+    self.hidden_size = 2
+    self.max_epoch = 1
+    self.max_max_epoch = 1
+    self.keep_prob = 1.0
+    self.lr_decay = 0.5
+    self.batch_size = 20
+    self.vocab_size = 10000
 
 def fetch_sparsity(session, model, eval_op=None, verbose=False):
   outputs = {}
@@ -574,20 +575,40 @@ def write_scalar_summary(summary_writer, tag, value, step):
 def main(_):
   if not FLAGS.data_path:
     raise ValueError("Must set --data_path to PTB data directory")
+  if not FLAGS.config_file:
+    raise ValueError("Must set --config_file to configuration file")
+  else:
+    with open(FLAGS.config_file, 'r') as fi:
+      config_params = json.load(fi)
+
+  # get logger
+  logging.basicConfig(level=logging.INFO)
+  logger = logging.getLogger('ptb_rnn')
+  logger.setLevel(logging.INFO)
+  # saving path
+  subfolder_name = strftime("%Y-%m-%d___%H-%M-%S", gmtime())
+  config_params['save_path'] = os.path.join(config_params['save_path'], subfolder_name)
+  if not os.path.exists(config_params['save_path']):
+    os.mkdir(config_params['save_path'])
+  else:
+    raise IOError('%s exist!' % config_params['save_path'])
+
+  log_file = os.path.join(config_params['save_path'], 'output.log')
+
+  logger.addHandler(logging.FileHandler(log_file))
+  logger.info('configurations in file:\n %s \n', config_params)
+  logger.info('tf.FLAGS:\n %s \n', vars(FLAGS))
 
   raw_data = reader.ptb_raw_data(FLAGS.data_path)
   train_data, valid_data, test_data, _ = raw_data
 
   config = get_config()
+  config.keep_prob = config_params.get('dropout_keep_prob',config.keep_prob)
   eval_config = get_config()
+  eval_config.keep_prob = config_params.get('dropout_keep_prob',eval_config.keep_prob)
   eval_config.batch_size = 1
   eval_config.num_steps = 1
-
-  if FLAGS.config_file:
-    with open(FLAGS.config_file, 'r') as fi:
-      config_params = json.load(fi)
-  else:
-    config_params = None
+  logger.info('network configurations: \n %s \n', vars(config))
 
   with tf.Graph().as_default():
 
@@ -602,13 +623,13 @@ def main(_):
     with tf.name_scope("Valid"):
       valid_input = PTBInput(config=config, data=valid_data, name="ValidInput")
       with tf.variable_scope("Model", reuse=True, initializer=initializer):
-        mvalid = PTBModel(is_training=False, config=config, input_=valid_input)
+        mvalid = PTBModel(is_training=False, config=config, input_=valid_input, config_params=config_params)
 
     with tf.name_scope("Test"):
       test_input = PTBInput(config=eval_config, data=test_data, name="TestInput")
       with tf.variable_scope("Model", reuse=True, initializer=initializer):
         mtest = PTBModel(is_training=False, config=eval_config,
-                         input_=test_input)
+                         input_=test_input, config_params = config_params)
 
     saver = tf.train.Saver(tf.global_variables())
     # Build an initialization operation to run below.
@@ -633,7 +654,7 @@ def main(_):
         print("Restored model with Valid Perplexity: %.3f" % (outputs['perplexity']))
 
       summary_writer = tf.summary.FileWriter(
-        FLAGS.save_path,
+        config_params['save_path'],
         graph=tf.get_default_graph())
 
       for i in range(config.max_max_epoch):
@@ -658,7 +679,7 @@ def main(_):
         for key, value in outputs['sparsity'].items():
           write_scalar_summary(summary_writer, key, value, i + 1)
 
-        checkpoint_path = os.path.join(FLAGS.save_path, 'model.ckpt')
+        checkpoint_path = os.path.join(config_params['save_path'], 'model.ckpt')
         saver.save(session, checkpoint_path, global_step=i + 1)
 
         outputs = run_epoch(session, mvalid)

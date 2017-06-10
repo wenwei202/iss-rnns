@@ -1,4 +1,7 @@
 {
+  "save_path":"/tmp",
+  "weight_decay": 0.0,
+  "dropout_keep_prob": 0.60,
   "grouplasso":{
     "global_decay": 0.005,
     "Model/RNN/multi_rnn_cell/cell_0/basic_lstm_cell/weights": {
