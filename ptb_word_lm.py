@@ -604,8 +604,10 @@ def main(_):
 
   config = get_config()
   config.keep_prob = config_params.get('dropout_keep_prob',config.keep_prob)
+  config.learning_rate = config_params.get('learning_rate', config.learning_rate)
   eval_config = get_config()
   eval_config.keep_prob = config_params.get('dropout_keep_prob',eval_config.keep_prob)
+  eval_config.learning_rate = config_params.get('learning_rate', eval_config.learning_rate)
   eval_config.batch_size = 1
   eval_config.num_steps = 1
   logger.info('network configurations: \n %s \n', vars(config))

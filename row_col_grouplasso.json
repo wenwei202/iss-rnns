@@ -1,9 +1,10 @@
 {
   "save_path":"/tmp",
+  "learning_rate": 1.0,
   "weight_decay": 0.0,
   "dropout_keep_prob": 0.60,
   "grouplasso":{
-    "global_decay": 0.005,
+    "global_decay": 0.003,
     "Model/RNN/multi_rnn_cell/cell_0/basic_lstm_cell/weights": {
       "row_decay_multi": 1.0,
       "col_decay_multi": 1.0
