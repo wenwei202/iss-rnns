@@ -104,6 +104,28 @@ def add_dimen_grouplasso(var, axis=0):
     reg = tf.reduce_sum(t)
     return reg
 
+def add_structure_grouplasso(var, coupled_var, couple_split_num=2):
+  with tf.name_scope("StructureGroupLasso"):
+    with tf.control_dependencies([tf.assert_equal(tf.size(tf.shape(var)), tf.constant(2)),
+                                  tf.assert_equal(tf.size(tf.shape(coupled_var)), tf.constant(2))]):
+
+      t1 = tf.square(var)
+      t1_col_sum = tf.reduce_sum(t1, axis=0)
+      t1_col_sum1, t1_col_sum2, t1_col_sum3, t1_col_sum4 = tf.split(t1_col_sum, 4)
+      t1_row_sum = tf.reduce_sum(t1, axis=1)
+      _, t1_row_sum2 = tf.split(t1_row_sum, 2)
+
+      t2 = tf.square(coupled_var)
+      t2_row_sum = tf.reduce_sum(t2, axis=1)
+      t2_row_sums = zip(tf.split(t2_row_sum, couple_split_num))
+
+      reg_sum = t1_row_sum2 + \
+                t1_col_sum1 + t1_col_sum2 + t1_col_sum3 + t1_col_sum4 + \
+                t2_row_sums[0]+ \
+                tf.constant(1.0e-8)
+      reg_sqrt = tf.sqrt(reg_sum)
+      reg = tf.reduce_sum(reg_sqrt)
+      return reg
 
 def add_blockwise_grouplasso(t, block_row_size, block_col_size):
   raise NotImplementedError('Not debugged. And the implementation is very slow when block is small.')
@@ -198,9 +220,7 @@ def zerout_gradients_for_zero_weights(grads_and_vars, mode='element'):
     if mode=='element':
       where_cond = tf.less(tf.abs(variable), zero_threshold)
     elif mode=='group':
-      # do nothing, the mathched groups will always be frozen
-      where_cond = tf.constant(False, shape=tf.shape(gradient))
-      pass
+      raise NotImplementedError('Group wise freezing is not implemented yet.')
     else:
       raise ValueError('Unsupported mode == %s' % mode)
 
@@ -318,10 +338,28 @@ class PTBModel(object):
         var_name = train_var.op.name
         glasso_param = glasso_params.get(var_name,None)
         if glasso_param:
-          glasso_reg = add_dimen_grouplasso(train_var, axis=0)
-          self._regularization = self._regularization + glasso_reg * glasso_params['global_decay'] * glasso_param['col_decay_multi']
-          glasso_reg = add_dimen_grouplasso(train_var, axis=1)
-          self._regularization = self._regularization + glasso_reg*glasso_params['global_decay']*glasso_param['row_decay_multi']
+          # column group lasso
+          coef = glasso_params['global_decay'] * glasso_param.get('col_decay_multi', 0.0)
+          if coef:
+            glasso_reg = add_dimen_grouplasso(train_var, axis=0)
+            self._regularization = self._regularization + glasso_reg * coef
+          # row group lasso
+          coef = glasso_params['global_decay']*glasso_param.get('row_decay_multi', 0.0)
+          if coef:
+            glasso_reg = add_dimen_grouplasso(train_var, axis=1)
+            self._regularization = self._regularization + glasso_reg * coef
+          # structure lasso
+          coef = glasso_params['global_decay'] * glasso_param.get('structure_decay_multi', 0.0)
+          if coef:
+            # find the coupled layer/var
+            coupled_train_var = None
+            for _var in tf.trainable_variables():
+              if _var.op.name == glasso_param['coupled_layer']:
+                coupled_train_var = _var
+                break
+            couple_split_num = glasso_param.get('couple_split_num', 2)
+            glasso_reg = add_structure_grouplasso(train_var, coupled_train_var, couple_split_num=couple_split_num)
+            self._regularization = self._regularization + glasso_reg * coef
 
     if config_params['weight_decay'] > 0 or glasso_params:
       # sparsity statistcis
