@@ -91,6 +91,8 @@ flags.DEFINE_string("regularizer", 'l1_regularizer',
                     "Regularizer type.")
 flags.DEFINE_string("optimizer", 'gd',
                     "Optimizer of sgd: gd and adam.")
+flags.DEFINE_string("freeze_mode", None,
+                    "How to freeze zero weights.")
 
 FLAGS = flags.FLAGS
 
@@ -177,6 +179,36 @@ def plot_tensor(t,title):
       plt.title(' %d/%d matches' % (len(match_idx), sum(row_zero_idx[subsize:subsize*2])))
   else:
     print ('ignoring %s' % title)
+
+def zerout_gradients_for_zero_weights(grads_and_vars, mode='element'):
+  """ zerout gradients for weights with zero values, so as to freeze zero weights
+  Args:
+      grads_and_vars: Lists of (gradient, variable).
+      mode: the mode to freeze weights.
+        'element': freeze all zero weights
+        'group': freeze rows/columns that are fully zeros
+  """
+  gradients, variables = zip(*grads_and_vars)
+  zerout_gradients = []
+  for gradient, variable in zip(gradients, variables):
+    if gradient is None:
+      zerout_gradients.append(None)
+      continue
+
+    if mode=='element':
+      where_cond = tf.less(tf.abs(variable), zero_threshold)
+    elif mode=='group':
+      # do nothing, the mathched groups will always be frozen
+      where_cond = tf.constant(False, shape=tf.shape(gradient))
+      pass
+    else:
+      raise ValueError('Unsupported mode == %s' % mode)
+
+    zerout_gradient = tf.where(where_cond,
+             tf.zeros_like(gradient),
+             gradient)
+    zerout_gradients.append(zerout_gradient)
+  return list(zip(zerout_gradients, variables))
 
 
 def data_type():
@@ -329,8 +361,11 @@ class PTBModel(object):
     else:
       raise ValueError("Wrong optimizer!")
 
+    grads_vars = zip(grads, tvars)
+    if FLAGS.freeze_mode:
+      grads_vars = zerout_gradients_for_zero_weights(grads_vars, FLAGS.freeze_mode)
     self._train_op = optimizer.apply_gradients(
-        zip(grads, tvars),
+        grads_vars,
         global_step=tf.contrib.framework.get_or_create_global_step())
 
     self._new_lr = tf.placeholder(
