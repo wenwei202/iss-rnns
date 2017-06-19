@@ -16,6 +16,9 @@ class Trainer(object):
         self.summary = model.summary
         self.grads = self.opt.compute_gradients(self.loss, var_list=self.var_list)
         self.train_op = self.opt.apply_gradients(self.grads, global_step=self.global_step)
+        if model.get_sparsity_op():
+            with tf.control_dependencies([self.train_op]):
+                self.train_op = tf.group(self.train_op, model.get_sparsity_op())
 
     def get_train_op(self):
         return self.train_op
@@ -25,11 +28,12 @@ class Trainer(object):
         _, ds = batch
         feed_dict = self.model.get_feed_dict(ds, True)
         if get_summary:
-            loss, summary, train_op = \
-                sess.run([self.loss, self.summary, self.train_op], feed_dict=feed_dict)
+            loss, train_op, summary = \
+                sess.run([self.loss, self.train_op, self.summary], feed_dict=feed_dict)
         else:
             loss, train_op = sess.run([self.loss, self.train_op], feed_dict=feed_dict)
             summary = None
+        # pay attention to the order
         return loss, summary, train_op
 
 
@@ -56,6 +60,9 @@ class MultiGPUTrainer(object):
         self.loss = tf.add_n(losses)/len(losses)
         self.grads = average_gradients(grads_list)
         self.train_op = self.opt.apply_gradients(self.grads, global_step=self.global_step)
+        if model.get_sparsity_op():
+            with tf.control_dependencies([self.train_op]):
+                self.train_op = tf.group(self.train_op, model.get_sparsity_op())
 
     def step(self, sess, batches, get_summary=False):
         assert isinstance(sess, tf.Session)
@@ -65,9 +72,10 @@ class MultiGPUTrainer(object):
             feed_dict.update(model.get_feed_dict(ds, True))
 
         if get_summary:
-            loss, summary, train_op = \
-                sess.run([self.loss, self.summary, self.train_op], feed_dict=feed_dict)
+            loss, train_op, summary = \
+                sess.run([self.loss, self.train_op, self.summary], feed_dict=feed_dict)
         else:
             loss, train_op = sess.run([self.loss, self.train_op], feed_dict=feed_dict)
             summary = None
+        # pay attention to the order
         return loss, summary, train_op

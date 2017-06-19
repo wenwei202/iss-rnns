@@ -10,6 +10,7 @@ from my.tensorflow import get_initializer
 from my.tensorflow.nn import softsel, get_logits, highway_network, multi_conv1d
 from my.tensorflow.rnn import bidirectional_dynamic_rnn
 from my.tensorflow.rnn_cell import SwitchableDropoutWrapper, AttentionCell
+from my.tensorflow import add_sparsity_regularization
 
 
 def get_multi_gpu_models(config):
@@ -59,6 +60,9 @@ class Model(object):
         # Loss outputs
         self.loss = None
 
+        # Sparsity op
+        self.sparsity_op = None
+
         self._build_forward()
         self._build_loss()
         self.var_ema = None
@@ -66,6 +70,8 @@ class Model(object):
             self._build_var_ema()
         if config.mode == 'train':
             self._build_ema()
+        if config.l1wd:
+            self._build_sparsity()
 
         self.summary = tf.summary.merge_all()
         self.summary = tf.summary.merge(tf.get_collection("summaries", scope=self.scope))
@@ -167,6 +173,8 @@ class Model(object):
                 h = tf.concat(axis=3, values=[fw_h, bw_h])  # [N, M, JX, 2d]
             self.tensor_dict['u'] = u
             self.tensor_dict['h'] = h
+            if config.l1wd:
+                add_sparsity_regularization(config.l1wd, tf.get_variable_scope().name)
 
         with tf.variable_scope("main"):
             if config.dynamic_att:
@@ -209,6 +217,9 @@ class Model(object):
             flat_yp = tf.nn.softmax(flat_logits)  # [-1, M*JX]
             flat_logits2 = tf.reshape(logits2, [-1, M * JX])
             flat_yp2 = tf.nn.softmax(flat_logits2)
+
+            if config.l1wd:
+                add_sparsity_regularization(config.l1wd, tf.get_variable_scope().name)
 
             if config.na:
                 na_bias = tf.get_variable("na_bias", shape=[], dtype='float')
@@ -313,8 +324,27 @@ class Model(object):
         with tf.control_dependencies([ema_op]):
             self.loss = tf.identity(self.loss)
 
+    def _build_sparsity(self):
+        sparsity_op = []
+        for train_var in tf.trainable_variables():
+            # zerout by small threshold to stablize the sparsity
+            sp_name = train_var.op.name
+            threshold = max(self.config.zero_threshold, 2 * self.config.l1wd * self.config.init_lr)
+            where_cond = tf.less(tf.abs(train_var), threshold)
+            train_var = tf.assign(train_var, tf.where(where_cond,
+                                                      tf.zeros(tf.shape(train_var)),
+                                                      train_var))
+            # statistics
+            s = tf.nn.zero_fraction(train_var)
+            tf.summary.scalar(sp_name + '_elt_sparsity', s)
+            sparsity_op.append(s)
+        self.sparsity_op = tf.group(*sparsity_op)
+
     def get_loss(self):
         return self.loss
+
+    def get_sparsity_op(self):
+        return self.sparsity_op
 
     def get_global_step(self):
         return self.global_step
