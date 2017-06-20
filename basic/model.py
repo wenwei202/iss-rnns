@@ -15,12 +15,13 @@ from my.tensorflow import add_sparsity_regularization
 
 def get_multi_gpu_models(config):
     models = []
-    for gpu_idx in range(config.num_gpus):
-        with tf.name_scope("model_{}".format(gpu_idx)) as scope, tf.device("/{}:{}".format(config.device_type, gpu_idx)):
-            if gpu_idx > 0:
-                tf.get_variable_scope().reuse_variables()
-            model = Model(config, scope, rep=gpu_idx == 0)
-            models.append(model)
+    with tf.variable_scope(tf.get_variable_scope()):
+        for gpu_idx in range(config.num_gpus):
+            with tf.name_scope("model_{}".format(gpu_idx)) as scope, tf.device("/{}:{}".format(config.device_type, gpu_idx)):
+                if gpu_idx > 0:
+                    tf.get_variable_scope().reuse_variables()
+                model = Model(config, scope, rep=gpu_idx == 0)
+                models.append(model)
     return models
 
 
@@ -68,8 +69,8 @@ class Model(object):
         self.var_ema = None
         if rep:
             self._build_var_ema()
-        if config.mode == 'train':
-            self._build_ema()
+            if config.mode == 'train':
+                self._build_ema()
         if config.l1wd:
             self._build_sparsity()
 
@@ -142,20 +143,20 @@ class Model(object):
         self.tensor_dict['xx'] = xx
         self.tensor_dict['qq'] = qq
 
-        cell_fw = BasicLSTMCell(d, state_is_tuple=True)
-        cell_bw = BasicLSTMCell(d, state_is_tuple=True)
+        cell_fw = BasicLSTMCell(d, state_is_tuple=True, reuse=tf.get_variable_scope().reuse)
+        cell_bw = BasicLSTMCell(d, state_is_tuple=True, reuse=tf.get_variable_scope().reuse)
         d_cell_fw = SwitchableDropoutWrapper(cell_fw, self.is_train, input_keep_prob=config.input_keep_prob)
         d_cell_bw = SwitchableDropoutWrapper(cell_bw, self.is_train, input_keep_prob=config.input_keep_prob)
-        cell2_fw = BasicLSTMCell(d, state_is_tuple=True)
-        cell2_bw = BasicLSTMCell(d, state_is_tuple=True)
+        cell2_fw = BasicLSTMCell(d, state_is_tuple=True, reuse=tf.get_variable_scope().reuse)
+        cell2_bw = BasicLSTMCell(d, state_is_tuple=True, reuse=tf.get_variable_scope().reuse)
         d_cell2_fw = SwitchableDropoutWrapper(cell2_fw, self.is_train, input_keep_prob=config.input_keep_prob)
         d_cell2_bw = SwitchableDropoutWrapper(cell2_bw, self.is_train, input_keep_prob=config.input_keep_prob)
-        cell3_fw = BasicLSTMCell(d, state_is_tuple=True)
-        cell3_bw = BasicLSTMCell(d, state_is_tuple=True)
+        cell3_fw = BasicLSTMCell(d, state_is_tuple=True, reuse=tf.get_variable_scope().reuse)
+        cell3_bw = BasicLSTMCell(d, state_is_tuple=True, reuse=tf.get_variable_scope().reuse)
         d_cell3_fw = SwitchableDropoutWrapper(cell3_fw, self.is_train, input_keep_prob=config.input_keep_prob)
         d_cell3_bw = SwitchableDropoutWrapper(cell3_bw, self.is_train, input_keep_prob=config.input_keep_prob)
-        cell4_fw = BasicLSTMCell(d, state_is_tuple=True)
-        cell4_bw = BasicLSTMCell(d, state_is_tuple=True)
+        cell4_fw = BasicLSTMCell(d, state_is_tuple=True, reuse=tf.get_variable_scope().reuse)
+        cell4_bw = BasicLSTMCell(d, state_is_tuple=True, reuse=tf.get_variable_scope().reuse)
         d_cell4_fw = SwitchableDropoutWrapper(cell4_fw, self.is_train, input_keep_prob=config.input_keep_prob)
         d_cell4_bw = SwitchableDropoutWrapper(cell4_bw, self.is_train, input_keep_prob=config.input_keep_prob)
         x_len = tf.reduce_sum(tf.cast(self.x_mask, 'int32'), 2)  # [N, M]
