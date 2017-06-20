@@ -3,6 +3,8 @@ import os
 import tensorflow as tf
 
 from basic.main import main as m
+import logging
+from time import gmtime, strftime
 
 flags = tf.app.flags
 
@@ -23,7 +25,7 @@ flags.DEFINE_string("device_type", "gpu", "device for computing gradients (paral
 flags.DEFINE_integer("num_gpus", 1, "num of gpus or cpus for computing gradients [1]")
 
 # Essential training and test options
-flags.DEFINE_string("mode", "test", "trains | test | forward [test]")
+flags.DEFINE_string("mode", "test", "train | test | forward [test]")
 flags.DEFINE_boolean("load", True, "load saved data? [True]")
 flags.DEFINE_bool("single", False, "supervise only the answer sentence? [False]")
 flags.DEFINE_boolean("debug", False, "Debugging mode? [False]")
@@ -105,6 +107,22 @@ flags.DEFINE_bool("dynamic_att", False, "Dynamic attention [False]")
 
 def main(_):
     config = flags.FLAGS
+
+    if 'train' == config.mode:
+        # get logger
+        logging.basicConfig(level=logging.INFO)
+        logger = logging.getLogger('bidaf')
+        logger.setLevel(logging.INFO)
+        # saving path
+        subfolder_name = strftime("%Y-%m-%d___%H-%M-%S", gmtime())
+        config.out_base_dir = os.path.join(config.out_base_dir, subfolder_name)
+        if not os.path.exists(config.out_base_dir):
+            os.mkdir(config.out_base_dir)
+        else:
+            raise IOError('%s exist!' % config.out_base_dir)
+        log_file = os.path.join(config.out_base_dir, 'output.log')
+        logger.addHandler(logging.FileHandler(log_file))
+        logger.info('configurations in file:\n %s \n', vars(config))
 
     config.out_dir = os.path.join(config.out_base_dir, config.model_name, str(config.run_id).zfill(2))
 
