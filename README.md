@@ -30,6 +30,10 @@ python -m squad.prepro
 ```
 
 ## 2. Training
+Note that the training script save results in the subfolder named as timestamps. Before running, please:
+```
+mkdir out
+```
 The model was trained with NVidia Titan X (Pascal Architecture, 2016).
 The model requires at least 12GB of GPU RAM.
 If your GPU RAM is smaller than 12GB, you can either decrease batch size (performance might degrade),
