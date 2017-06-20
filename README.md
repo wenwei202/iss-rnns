@@ -146,19 +146,22 @@ python -m basic.cli --mode test --batch_size 8 --eval_num_batches 0 --load_step 
 ## Multi-GPU Training & Testing
 Our model supports multi-GPU training.
 We follow the parallelization paradigm described in [TensorFlow Tutorial][multi-gpu].
-In short, if you want to use batch size of 60 (default) but if you have 3 GPUs with 4GB of RAM,
-then you initialize each GPU with batch size of 20, and combine the gradients on CPU.
+In short, if you want to use batch size of 60 (default) but if you have 2 GPUs with 6GB of RAM,
+then you initialize each GPU with batch size of 30, and combine the gradients on CPU.
 This can be easily done by running:
 ```
-python -m basic.cli --mode train --noload --num_gpus 3 --batch_size 20
+python -m basic.cli --mode train --noload --num_gpus 2 --batch_size 30
 
-# finetuning
-python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 --num_gpus 2 --batch_size 30
+# finetuning with L1
+python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 --l1wd 0.0001 --num_gpus 2 --batch_size 30
 ```
 
 Similarly, you can speed up your testing by:
 ```
-python -m basic.cli --num_gpus 3 --batch_size 20 
+python -m basic.cli --num_gpus 2 --batch_size 30 
+
+# specify the shared json and trained model
+python -m basic.cli --len_opt --cluster --shared_path out//basic/00/shared.json --load_path out//basic/00/save/basic-10000 --num_gpus 2 --batch_size 30 
 ```
  
 
