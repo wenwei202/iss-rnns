@@ -64,7 +64,7 @@ Similarly to training, you can give the optimization flags to speed up test (5 m
 python -m basic.cli --len_opt --cluster
 
 # specify the shared json and trained model
-python -m basic.cli --len_opt --shared_path out//basic/00/shared.json --load_path out//basic/00/save/basic-10000
+python -m basic.cli --len_opt --cluster --shared_path out//basic/00/shared.json --load_path out//basic/00/save/basic-10000
 ```
 
 This command loads the most recently saved model during training and begins testing on the test data.
@@ -151,6 +151,9 @@ then you initialize each GPU with batch size of 20, and combine the gradients on
 This can be easily done by running:
 ```
 python -m basic.cli --mode train --noload --num_gpus 3 --batch_size 20
+
+# finetuning
+python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 --num_gpus 2 --batch_size 30
 ```
 
 Similarly, you can speed up your testing by:
