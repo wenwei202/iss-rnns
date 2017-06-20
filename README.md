@@ -153,7 +153,7 @@ This can be easily done by running:
 python -m basic.cli --mode train --noload --num_gpus 2 --batch_size 30
 
 # finetuning with L1
-python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 --l1wd 0.0001 --num_gpus 2 --batch_size 30
+python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 --l1wd 0.0001 --input_keep_prob 0.9 --num_gpus 2 --batch_size 30
 ```
 
 Similarly, you can speed up your testing by:
