@@ -62,6 +62,9 @@ python -m basic.cli
 Similarly to training, you can give the optimization flags to speed up test (5 minutes on dev data):
 ```
 python -m basic.cli --len_opt --cluster
+
+# specify the shared json and trained model
+python -m basic.cli --len_opt --shared_path out//basic/00/shared.json --load_path out//basic/00/save/basic-10000
 ```
 
 This command loads the most recently saved model during training and begins testing on the test data.
