@@ -11,7 +11,9 @@ from my.tensorflow.nn import softsel, get_logits, highway_network, multi_conv1d
 from my.tensorflow.rnn import bidirectional_dynamic_rnn
 from my.tensorflow.rnn_cell import SwitchableDropoutWrapper, AttentionCell
 from my.tensorflow import add_sparsity_regularization
+import re
 
+SPARSITY_VARS = 'sparse_vars'
 
 def get_multi_gpu_models(config):
     models = []
@@ -175,7 +177,7 @@ class Model(object):
             self.tensor_dict['u'] = u
             self.tensor_dict['h'] = h
             if config.l1wd:
-                add_sparsity_regularization(config.l1wd, tf.get_variable_scope().name)
+                add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
 
         with tf.variable_scope("main"):
             if config.dynamic_att:
@@ -220,7 +222,7 @@ class Model(object):
             flat_yp2 = tf.nn.softmax(flat_logits2)
 
             if config.l1wd:
-                add_sparsity_regularization(config.l1wd, tf.get_variable_scope().name)
+                add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
 
             if config.na:
                 na_bias = tf.get_variable("na_bias", shape=[], dtype='float')
@@ -327,7 +329,7 @@ class Model(object):
 
     def _build_sparsity(self):
         sparsity_op = []
-        for train_var in tf.trainable_variables():
+        for train_var in tf.get_collection(SPARSITY_VARS):
             # zerout by small threshold to stablize the sparsity
             sp_name = train_var.op.name
             threshold = max(self.config.zero_threshold, 2 * self.config.l1wd * self.config.init_lr)
@@ -337,7 +339,11 @@ class Model(object):
                                                       train_var))
             # statistics
             s = tf.nn.zero_fraction(train_var)
-            tf.summary.scalar(sp_name + '_elt_sparsity', s)
+
+            # do not display bias
+            if not re.match(".*bias.*", sp_name):
+                tf.summary.scalar(sp_name + '/elt_sparsity', s)
+
             sparsity_op.append(s)
         self.sparsity_op = tf.group(*sparsity_op)
 

@@ -150,12 +150,16 @@ def add_wd(wd, scope=None):
             weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name="{}/wd".format(var.op.name))
             tf.add_to_collection('losses', weight_decay)
 
-def add_sparsity_regularization(wd, scope=None):
+def add_sparsity_regularization(wd, collection_name=None, scope=None):
     variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
     with tf.name_scope("sparsity_regular"):
         the_regularizer = tf.contrib.layers.l1_regularizer(scale=wd, scope=scope)
         reg_loss = tf.contrib.layers.apply_regularization(the_regularizer, variables)
         tf.add_to_collection('losses', reg_loss)
+        # add to collections
+        collection_name = collection_name or 'sparse_vars'
+        for eachvar in variables:
+            tf.add_to_collection(collection_name, eachvar)
 
 def grouper(iterable, n, fillvalue=None, shorten=False, num_groups=None):
     args = [iter(iterable)] * n
