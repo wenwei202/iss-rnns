@@ -5,6 +5,7 @@ import tensorflow as tf
 from functools import reduce
 from operator import mul
 import numpy as np
+import re
 
 VERY_BIG_NUMBER = 1e30
 VERY_SMALL_NUMBER = 1e-30
@@ -150,12 +151,20 @@ def add_wd(wd, scope=None):
             weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name="{}/wd".format(var.op.name))
             tf.add_to_collection('losses', weight_decay)
 
+def _excluded_var_pattern():
+    return "(main/logits)|(main/p0/bi_attention)|(prepro/u1)"
+
 def add_sparsity_regularization(wd, collection_name=None, scope=None):
-    variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
+    orig_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
+    variables = []
+    for eachvar in orig_variables:
+        if not re.match(_excluded_var_pattern(), eachvar.op.name):
+            variables.append(eachvar)
     with tf.name_scope("sparsity_regular"):
-        the_regularizer = tf.contrib.layers.l1_regularizer(scale=wd, scope=scope)
-        reg_loss = tf.contrib.layers.apply_regularization(the_regularizer, variables)
-        tf.add_to_collection('losses', reg_loss)
+        if len(variables):
+            the_regularizer = tf.contrib.layers.l1_regularizer(scale=wd, scope=scope)
+            reg_loss = tf.contrib.layers.apply_regularization(the_regularizer, variables)
+            tf.add_to_collection('losses', reg_loss)
         # add to collections
         collection_name = collection_name or 'sparse_vars'
         for eachvar in variables:
