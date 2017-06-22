@@ -2,7 +2,7 @@ import tensorflow as tf
 
 from basic.model import Model
 from my.tensorflow import average_gradients
-
+from my.tensorflow.general import zerout_gradients_for_zero_weights
 
 class Trainer(object):
     def __init__(self, config, model):
@@ -15,6 +15,8 @@ class Trainer(object):
         self.global_step = model.get_global_step()
         self.summary = model.summary
         self.grads = self.opt.compute_gradients(self.loss, var_list=self.var_list)
+        if config.freeze_mode:
+            self.grads = zerout_gradients_for_zero_weights(self.grads, config.zero_threshold, mode=config.freeze_mode)
         self.train_op = self.opt.apply_gradients(self.grads, global_step=self.global_step)
         if model.get_sparsity_op():
             with tf.control_dependencies([self.train_op]):
@@ -59,6 +61,8 @@ class MultiGPUTrainer(object):
 
         self.loss = tf.add_n(losses)/len(losses)
         self.grads = average_gradients(grads_list)
+        if config.freeze_mode:
+            self.grads = zerout_gradients_for_zero_weights(self.grads, config.zero_threshold, mode=config.freeze_mode)
         self.train_op = self.opt.apply_gradients(self.grads, global_step=self.global_step)
         if model.get_sparsity_op():
             with tf.control_dependencies([self.train_op]):

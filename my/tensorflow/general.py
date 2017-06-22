@@ -194,3 +194,31 @@ def get_num_params():
         shape = variable.get_shape()
         num_params += reduce(mul, [dim.value for dim in shape], 1)
     return num_params
+
+def zerout_gradients_for_zero_weights(grads_and_vars, zero_threshold=0.0001, mode='element'):
+  """ zerout gradients for weights with zero values, so as to freeze zero weights
+  Args:
+      grads_and_vars: Lists of (gradient, variable).
+      mode: the mode to freeze weights.
+        'element': freeze all zero weights
+        'group': freeze rows/columns that are fully zeros
+  """
+  gradients, variables = zip(*grads_and_vars)
+  zerout_gradients = []
+  for gradient, variable in zip(gradients, variables):
+    if gradient is None:
+      zerout_gradients.append(None)
+      continue
+
+    if mode=='element':
+      where_cond = tf.less(tf.abs(variable), zero_threshold)
+    elif mode=='group':
+      raise NotImplementedError('Group wise freezing is not implemented yet.')
+    else:
+      raise ValueError('Unsupported mode == %s' % mode)
+
+    zerout_gradient = tf.where(where_cond,
+             tf.zeros_like(gradient),
+             gradient)
+    zerout_gradients.append(zerout_gradient)
+  return list(zip(zerout_gradients, variables))
