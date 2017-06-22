@@ -158,6 +158,9 @@ python -m basic.cli --mode train --noload --num_gpus 2 --batch_size 30
 
 # finetuning with L1
 python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 --l1wd 0.0001 --input_keep_prob 0.9 --num_gpus 2 --batch_size 30
+
+# finetuning with zero weights frozen
+python -m basic.cli --mode train --len_opt --cluster --load_path out//basic/00/save/basic-20000 --freeze_mode element --input_keep_prob 0.9 --init_lr 0.0002 --num_gpus 2 --batch_size 30
 ```
 
 Similarly, you can speed up your testing by:
@@ -165,7 +168,7 @@ Similarly, you can speed up your testing by:
 python -m basic.cli --num_gpus 2 --batch_size 30 
 
 # specify the shared json and trained model
-python -m basic.cli --len_opt --cluster --shared_path out//basic/00/shared.json --load_path out//basic/00/save/basic-10000 --num_gpus 2 --batch_size 30 
+python -m basic.cli --len_opt --cluster --shared_path out//basic/00/shared.json --load_path out//basic/00/save/basic-20000 --num_gpus 2 --batch_size 30 
 ```
  
 
