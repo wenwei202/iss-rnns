@@ -15,7 +15,51 @@ from basic.model import get_multi_gpu_models
 from basic.trainer import MultiGPUTrainer
 from basic.read_data import read_data, get_squad_data_filter, update_config
 from my.tensorflow import get_num_params
+import matplotlib.pyplot as plt
 
+def plot_tensor(t,title):
+  if len(t.shape)==2:
+    print(title)
+    t = np.abs(t) > 0.0
+    t = t.astype(int)
+    zero_idx = t == 0
+    col_zero_idx = np.sum(np.abs(t), axis=0) == 0
+    row_zero_idx = np.sum(np.abs(t), axis=1) == 0
+    sparsity = ( ' sparsity: %f, ' % (sum(sum(zero_idx))/np.prod(t.shape)) )
+    col_sparsity = (' column sparsity: %d/%d, ' % (sum(col_zero_idx), t.shape[1]) )
+    row_sparsity = (' row sparsity: %d/%d' % (sum(row_zero_idx), t.shape[0]) )
+
+    plt.figure()
+
+    plt.subplot(3, 1, 1)
+    plt.imshow(t.reshape((t.shape[0], -1)),
+               cmap=plt.get_cmap('binary'),
+               interpolation='none')
+    plt.title(title+sparsity)
+
+    col_zero_map = np.tile(col_zero_idx, (t.shape[0], 1))
+    row_zero_map = np.tile(row_zero_idx.reshape((t.shape[0], 1)), (1, t.shape[1]))
+    zero_map = col_zero_map + row_zero_map
+    zero_map_cp = zero_map.copy()
+    plt.subplot(3,1,2)
+    plt.imshow(zero_map_cp,cmap=plt.get_cmap('gray'),interpolation='none')
+    plt.title(col_sparsity + row_sparsity)
+
+    if 2*t.shape[0] == t.shape[1]:
+      subsize = int(t.shape[0]/2)
+      match_map = np.zeros(subsize,dtype=np.int)
+      match_map = match_map + row_zero_idx[subsize:2 * subsize]
+      for blk in range(0,4):
+        match_map = match_map + col_zero_idx[blk*subsize : blk*subsize+subsize]
+      match_idx = np.where(match_map == 5)[0]
+      zero_map[subsize+match_idx,:] = False
+      for blk in range(0, 4):
+        zero_map[:,blk*subsize+match_idx] = False
+      plt.subplot(3, 1, 3)
+      plt.imshow(zero_map, cmap=plt.get_cmap('Reds'), interpolation='none')
+      plt.title(' %d/%d matches' % (len(match_idx), sum(row_zero_idx[subsize:subsize*2])))
+  else:
+    print ('ignoring %s' % title)
 
 def main(config):
     set_dirs(config)
@@ -154,6 +198,12 @@ def _test(config):
     num_steps = math.ceil(test_data.num_examples / (config.batch_size * config.num_gpus))
     if 0 < config.test_num_batches < num_steps:
         num_steps = config.test_num_batches
+
+    # plot weights
+    with sess:
+        for train_var in tf.trainable_variables():
+            plot_tensor(train_var.eval(), train_var.op.name)
+        plt.show()
 
     e = None
     for multi_batch in tqdm(test_data.get_multi_batches(config.batch_size, config.num_gpus, num_steps=num_steps, cluster=config.cluster), total=num_steps):
