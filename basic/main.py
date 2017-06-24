@@ -200,10 +200,9 @@ def _test(config):
         num_steps = config.test_num_batches
 
     # plot weights
-    with sess:
-        for train_var in tf.trainable_variables():
-            plot_tensor(train_var.eval(), train_var.op.name)
-        plt.show()
+    for train_var in tf.trainable_variables():
+        plot_tensor(train_var.eval(session=sess), train_var.op.name)
+    plt.show()
 
     e = None
     for multi_batch in tqdm(test_data.get_multi_batches(config.batch_size, config.num_gpus, num_steps=num_steps, cluster=config.cluster), total=num_steps):

@@ -23,6 +23,9 @@ class GraphHandler(object):
         sess.run(tf.global_variables_initializer())
         if self.config.load:
             self._load(sess)
+            # zero out small weights
+            if self.model.get_sparsity_op():
+                sess.run([self.model.get_sparsity_op()])
 
         if self.config.mode == 'train':
             self.writer = tf.summary.FileWriter(self.config.log_dir, graph=tf.get_default_graph())
