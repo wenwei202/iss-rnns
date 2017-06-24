@@ -152,7 +152,8 @@ def add_wd(wd, scope=None):
             tf.add_to_collection('losses', weight_decay)
 
 def _excluded_var_pattern():
-    return "(main/logits)|(main/p0/bi_attention)|(prepro/u1)"
+    #return "(main/logits)|(main/p0/bi_attention)|(prepro/u1)"
+    return "(thisisapatternwetrytoexcludenothing)"
 
 def add_sparsity_regularization(wd, collection_name=None, scope=None):
     orig_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)

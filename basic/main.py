@@ -17,7 +17,7 @@ from basic.read_data import read_data, get_squad_data_filter, update_config
 from my.tensorflow import get_num_params
 import matplotlib.pyplot as plt
 
-def plot_tensor(t,title):
+def plot_tensor(t,title, plot_weights=True):
   if len(t.shape)==2:
     print(title)
     t = np.abs(t) > 0.0
@@ -28,6 +28,11 @@ def plot_tensor(t,title):
     sparsity = ( ' sparsity: %f, ' % (sum(sum(zero_idx))/np.prod(t.shape)) )
     col_sparsity = (' column sparsity: %d/%d, ' % (sum(col_zero_idx), t.shape[1]) )
     row_sparsity = (' row sparsity: %d/%d' % (sum(row_zero_idx), t.shape[0]) )
+    print(sparsity)
+    print(col_sparsity)
+    print(row_sparsity)
+    if not plot_weights:
+        return
 
     plt.figure()
 
@@ -201,7 +206,7 @@ def _test(config):
 
     # plot weights
     for train_var in tf.trainable_variables():
-        plot_tensor(train_var.eval(session=sess), train_var.op.name)
+        plot_tensor(train_var.eval(session=sess), train_var.op.name, config.plot_weights)
     plt.show()
 
     e = None
