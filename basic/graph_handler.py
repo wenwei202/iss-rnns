@@ -24,7 +24,7 @@ class GraphHandler(object):
         if self.config.load:
             self._load(sess)
             # zero out small weights
-            if self.model.get_sparsity_op():
+            if self.config.mode == 'test' or self.config.freeze_mode:
                 sess.run([self.model.get_sparsity_op()])
 
         if self.config.mode == 'train':

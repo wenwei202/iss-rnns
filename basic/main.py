@@ -25,9 +25,9 @@ def plot_tensor(t,title, plot_weights=True):
     zero_idx = t == 0
     col_zero_idx = np.sum(np.abs(t), axis=0) == 0
     row_zero_idx = np.sum(np.abs(t), axis=1) == 0
-    sparsity = ( ' sparsity: %f, ' % (sum(sum(zero_idx))/np.prod(t.shape)) )
-    col_sparsity = (' column sparsity: %d/%d, ' % (sum(col_zero_idx), t.shape[1]) )
-    row_sparsity = (' row sparsity: %d/%d' % (sum(row_zero_idx), t.shape[0]) )
+    sparsity = ( '    sparsity: %f, ' % (sum(sum(zero_idx))/np.prod(t.shape)) )
+    col_sparsity = ('    column sparsity: %d/%d, ' % (sum(col_zero_idx), t.shape[1]) )
+    row_sparsity = ('    row sparsity: %d/%d' % (sum(row_zero_idx), t.shape[0]) )
     print(sparsity)
     print(col_sparsity)
     print(row_sparsity)

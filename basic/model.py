@@ -73,8 +73,7 @@ class Model(object):
             self._build_var_ema()
             if config.mode == 'train':
                 self._build_ema()
-        if config.l1wd:
-            self._build_sparsity()
+        self._build_sparsity()
 
         self.summary = tf.summary.merge_all()
         self.summary = tf.summary.merge(tf.get_collection("summaries", scope=self.scope))
@@ -176,8 +175,7 @@ class Model(object):
                 h = tf.concat(axis=3, values=[fw_h, bw_h])  # [N, M, JX, 2d]
             self.tensor_dict['u'] = u
             self.tensor_dict['h'] = h
-            if config.l1wd:
-                add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
+            add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
 
         with tf.variable_scope("main"):
             if config.dynamic_att:
@@ -221,8 +219,7 @@ class Model(object):
             flat_logits2 = tf.reshape(logits2, [-1, M * JX])
             flat_yp2 = tf.nn.softmax(flat_logits2)
 
-            if config.l1wd:
-                add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
+            add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
 
             if config.na:
                 na_bias = tf.get_variable("na_bias", shape=[], dtype='float')
@@ -341,7 +338,7 @@ class Model(object):
             s = tf.nn.zero_fraction(train_var)
 
             # do not display bias
-            if not re.match(".*bias.*", sp_name):
+            if (not re.match(".*bias.*", sp_name)) and  self.config.l1wd:
                 tf.summary.scalar(sp_name + '/elt_sparsity', s)
 
             sparsity_op.append(s)
