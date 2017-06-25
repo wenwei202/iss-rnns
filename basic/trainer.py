@@ -16,7 +16,7 @@ class Trainer(object):
         self.summary = model.summary
         self.grads = self.opt.compute_gradients(self.loss, var_list=self.var_list)
         if config.freeze_mode:
-            self.grads = zerout_gradients_for_zero_weights(self.grads, 0.0, mode=config.freeze_mode)
+            self.grads = zerout_gradients_for_zero_weights(self.grads, mode=config.freeze_mode)
         self.train_op = self.opt.apply_gradients(self.grads, global_step=self.global_step)
         if self.config.l1wd:
             with tf.control_dependencies([self.train_op]):
@@ -62,7 +62,7 @@ class MultiGPUTrainer(object):
         self.loss = tf.add_n(losses)/len(losses)
         self.grads = average_gradients(grads_list)
         if config.freeze_mode:
-            self.grads = zerout_gradients_for_zero_weights(self.grads, 0.0, mode=config.freeze_mode)
+            self.grads = zerout_gradients_for_zero_weights(self.grads, mode=config.freeze_mode)
         self.train_op = self.opt.apply_gradients(self.grads, global_step=self.global_step)
         if self.config.l1wd:
             with tf.control_dependencies([self.train_op]):
