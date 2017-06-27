@@ -47,6 +47,7 @@ flags.DEFINE_float("input_keep_prob", 0.8, "Input keep prob for the dropout of L
 flags.DEFINE_float("keep_prob", 0.8, "Keep prob for the dropout of Char-CNN weights [0.8]")
 flags.DEFINE_float("wd", 0.0, "L2 weight decay for regularization [0.0]")
 flags.DEFINE_float("l1wd", 0.0, "L1 weight decay for sparsity regularization [0.0]")
+flags.DEFINE_float("row_col_wd", 0.0, "Group Lasso weight decay rows and columns [0.0]")
 flags.DEFINE_string("freeze_mode", None, "How to freeze zero weights. None | element | group [None]")
 flags.DEFINE_float("zero_threshold", 0.0004, "The threshold to stablize zeros [0.0004]")
 flags.DEFINE_bool("plot_weights", False, "Plot the weight matrixes before test? [False]")

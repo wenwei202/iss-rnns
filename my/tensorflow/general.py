@@ -171,6 +171,33 @@ def add_sparsity_regularization(wd, collection_name=None, scope=None):
         for eachvar in variables:
             tf.add_to_collection(collection_name, eachvar)
 
+def add_dimen_grouplasso(wd, collection_name=None, scope=None):
+    orig_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
+    variables = []
+    for eachvar in orig_variables:
+        if not re.match(_excluded_var_pattern(), eachvar.op.name):
+            variables.append(eachvar)
+    with tf.name_scope("DimenGroupLasso"):
+        collection_name = collection_name or 'sparse_vars'
+        for eachvar in variables:
+            the_shape = eachvar.get_shape().as_list()
+            if len(the_shape)<=1: # l1 is group lasso when the group size is 1
+                the_regularizer = tf.contrib.layers.l1_regularizer(scale=wd, scope=scope)
+                reg = tf.contrib.layers.apply_regularization(the_regularizer, [eachvar])
+            elif len(the_shape)==2:
+                reg = 0.0
+                for s, axis in zip(the_shape, range(len(the_shape))):
+                    if s != np.prod(the_shape):
+                        t = tf.square(eachvar)
+                        t = tf.reduce_sum(t, axis=axis) + tf.constant(1.0e-8)
+                        t = tf.sqrt(t)
+                        reg = reg + tf.reduce_sum(t) * wd
+            else:
+                raise NotImplementedError('variables with shapes > 2 is not implemented.')
+
+            tf.add_to_collection('losses', reg)
+            tf.add_to_collection(collection_name, eachvar)
+
 def grouper(iterable, n, fillvalue=None, shorten=False, num_groups=None):
     args = [iter(iterable)] * n
     out = zip_longest(*args, fillvalue=fillvalue)

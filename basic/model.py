@@ -11,6 +11,7 @@ from my.tensorflow.nn import softsel, get_logits, highway_network, multi_conv1d
 from my.tensorflow.rnn import bidirectional_dynamic_rnn
 from my.tensorflow.rnn_cell import SwitchableDropoutWrapper, AttentionCell
 from my.tensorflow import add_sparsity_regularization
+from my.tensorflow import add_dimen_grouplasso
 import re
 
 SPARSITY_VARS = 'sparse_vars'
@@ -179,6 +180,7 @@ class Model(object):
             self.tensor_dict['u'] = u
             self.tensor_dict['h'] = h
             add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
+            add_dimen_grouplasso(config.row_col_wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
 
         with tf.variable_scope("main"):
             if config.dynamic_att:
@@ -223,6 +225,7 @@ class Model(object):
             flat_yp2 = tf.nn.softmax(flat_logits2)
 
             add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
+            add_dimen_grouplasso(config.row_col_wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
 
             if config.na:
                 na_bias = tf.get_variable("na_bias", shape=[], dtype='float')
@@ -329,7 +332,8 @@ class Model(object):
 
     def _build_sparsity(self):
         sparsity_op = []
-        for train_var in tf.get_collection(SPARSITY_VARS):
+        sparse_var_set = list(set(tf.get_collection(SPARSITY_VARS)))
+        for train_var in sparse_var_set:
             # zerout by small threshold to stablize the sparsity
             sp_name = train_var.op.name
             threshold = max(self.config.zero_threshold, 2 * self.config.l1wd * self.config.init_lr)
