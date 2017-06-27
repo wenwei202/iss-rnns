@@ -26,6 +26,7 @@ class GraphHandler(object):
             # zero out small weights
             if self.config.mode == 'test' or self.config.freeze_mode:
                 sess.run([self.model.get_sparsity_op()])
+            sess.run([self.model.get_var_assignment_op()])
 
         if self.config.mode == 'train':
             self.writer = tf.summary.FileWriter(self.config.log_dir, graph=tf.get_default_graph())
@@ -36,7 +37,7 @@ class GraphHandler(object):
 
     def _load(self, sess):
         config = self.config
-        vars_ = {var.name.split(":")[0]: var for var in tf.global_variables()}
+        vars_ = {var.name.split(":")[0]: var for var in tf.trainable_variables()}
         if config.load_ema:
             ema = self.model.var_ema
             for var in tf.trainable_variables():

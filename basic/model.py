@@ -66,6 +66,8 @@ class Model(object):
         # Sparsity op
         self.sparsity_op = None
 
+        self.var_assignment_op = None
+
         self._build_forward()
         self._build_loss()
         self.var_ema = None
@@ -73,7 +75,8 @@ class Model(object):
             self._build_var_ema()
             if config.mode == 'train':
                 self._build_ema()
-        self._build_sparsity()
+            self._build_sparsity()
+            self._build_var_assignment()
 
         self.summary = tf.summary.merge_all()
         self.summary = tf.summary.merge(tf.get_collection("summaries", scope=self.scope))
@@ -344,11 +347,21 @@ class Model(object):
             sparsity_op.append(s)
         self.sparsity_op = tf.group(*sparsity_op)
 
+    def _build_var_assignment(self):
+        ops = []
+        for var in tf.trainable_variables():
+            avg_var = tf.assign(self.var_ema.average(var),var)
+            ops.append(avg_var)
+        self.var_assignment_op = tf.group(*ops)
+
     def get_loss(self):
         return self.loss
 
     def get_sparsity_op(self):
         return self.sparsity_op
+
+    def get_var_assignment_op(self):
+        return self.var_assignment_op
 
     def get_global_step(self):
         return self.global_step

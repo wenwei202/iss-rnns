@@ -37,7 +37,7 @@ flags.DEFINE_float("th", 0.5, "Threshold [0.5]")
 
 # Training / test parameters
 flags.DEFINE_integer("batch_size", 60, "Batch size [60]")
-flags.DEFINE_integer("val_num_batches", 100, "validation num batches [100]")
+flags.DEFINE_integer("val_num_batches", 0, "validation num batches [100]")
 flags.DEFINE_integer("test_num_batches", 0, "test num batches [0]")
 flags.DEFINE_integer("num_epochs", 12, "Total number of epochs for training [12]")
 flags.DEFINE_integer("num_steps", 10000, "Number of steps [10000]")
@@ -80,7 +80,7 @@ flags.DEFINE_bool("dump_pickle", True, "Dump pickle instead of json? [True]")
 flags.DEFINE_float("decay", 0.9, "Exponential moving average decay for logging values [0.9]")
 
 # Thresholds for speed and less memory usage
-flags.DEFINE_integer("word_count_th", 10, "word count th [100]")
+flags.DEFINE_integer("word_count_th", 10, "word count th [10]")
 flags.DEFINE_integer("char_count_th", 50, "char count th [500]")
 flags.DEFINE_integer("sent_size_th", 400, "sent size th [64]")
 flags.DEFINE_integer("num_sents_th", 8, "num sents th [8]")

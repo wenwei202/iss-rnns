@@ -141,6 +141,10 @@ def _train(config):
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
     graph_handler.initialize(sess)
 
+    # plot weights
+    for train_var in tf.trainable_variables():
+      plot_tensor(train_var.eval(session=sess), train_var.op.name, config.plot_weights)
+
     # Begin training
     num_steps = config.num_steps or int(math.ceil(train_data.num_examples / (config.batch_size * config.num_gpus))) * config.num_epochs
     global_step = 0

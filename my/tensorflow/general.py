@@ -196,7 +196,7 @@ def get_num_params():
         num_params += reduce(mul, [dim.value for dim in shape], 1)
     return num_params
 
-def zerout_gradients_for_zero_weights(grads_and_vars, zero_threshold=0.0001, mode='element'):
+def zerout_gradients_for_zero_weights(grads_and_vars, zero_threshold=0.0, mode='element'):
   """ zerout gradients for weights with zero values, so as to freeze zero weights
   Args:
       grads_and_vars: Lists of (gradient, variable).
