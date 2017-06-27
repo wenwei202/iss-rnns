@@ -168,7 +168,7 @@ python -m basic.cli --mode train --len_opt --cluster --load_path out//basic/00/s
 python -m basic.cli --num_gpus 2 --batch_size 30 
 
 # specify the shared json and trained model
-python -m basic.cli --len_opt --cluster --shared_path out//basic/00/shared.json --load_path out//basic/00/save/basic-20000 --num_gpus 2 --batch_size 30 --l1wd 0.000001 --plot_weights
+python -m basic.cli --len_opt --cluster --shared_path out//basic/00/shared.json --load_path out//basic/00/save/basic-20000 --num_gpus 2 --batch_size 30 --plot_weights
 ```
  
 
