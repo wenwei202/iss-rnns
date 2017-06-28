@@ -191,7 +191,7 @@ def add_dimen_grouplasso(wd, collection_name=None, scope=None):
                         t = tf.square(eachvar)
                         t = tf.reduce_sum(t, axis=axis) + tf.constant(1.0e-8)
                         t = tf.sqrt(t)
-                        reg = reg + tf.reduce_sum(t) * wd
+                        reg = reg + tf.reduce_sum(t) * wd * np.sqrt(s)
             else:
                 raise NotImplementedError('variables with shapes > 2 is not implemented.')
 
