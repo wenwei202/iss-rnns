@@ -1,0 +1,6 @@
+{
+  "save_path":"/tmp",
+  "learning_rate": 1.0,
+  "weight_decay": 0.0,
+  "dropout_keep_prob": 0.35
+}
