@@ -275,7 +275,7 @@ def zerout_gradients_for_zero_weights(grads_and_vars, mode='element'):
       continue
 
     if mode=='element':
-      where_cond = tf.less(tf.abs(variable), zero_threshold)
+      where_cond = tf.less_equal(tf.abs(variable), 0.0)
     elif mode=='group':
       raise NotImplementedError('Group wise freezing is not implemented yet.')
     else:
@@ -790,13 +790,14 @@ def main(_):
       session.run(init)
 
       if FLAGS.freeze_block_size:
-        for train_var in tf.trainable_variables():
-          plot_tensor(train_var.eval(), train_var.op.name)
-        plt.show()
+        if FLAGS.display_weights:
+          for train_var in tf.trainable_variables():
+            plot_tensor(train_var.eval(), train_var.op.name)
         session.run(m.mask_out_op)
-        for train_var in tf.trainable_variables():
-          plot_tensor(train_var.eval(), train_var.op.name)
-        plt.show()
+        if FLAGS.display_weights:
+          for train_var in tf.trainable_variables():
+            plot_tensor(train_var.eval(), train_var.op.name)
+          plt.show()
 
       threads = tf.train.start_queue_runners(sess=session, coord=coord)
       if FLAGS.restore_path:
