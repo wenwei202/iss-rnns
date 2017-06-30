@@ -171,7 +171,7 @@ def add_sparsity_regularization(wd, collection_name=None, scope=None):
         for eachvar in variables:
             tf.add_to_collection(collection_name, eachvar)
 
-def add_dimen_grouplasso(wd, collection_name=None, scope=None):
+def add_dimen_grouplasso(groupwd, l1wd, collection_name=None, scope=None):
     orig_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
     variables = []
     for eachvar in orig_variables:
@@ -182,16 +182,20 @@ def add_dimen_grouplasso(wd, collection_name=None, scope=None):
         for eachvar in variables:
             the_shape = eachvar.get_shape().as_list()
             if len(the_shape)<=1: # l1 is group lasso when the group size is 1
-                the_regularizer = tf.contrib.layers.l1_regularizer(scale=wd, scope=scope)
+                the_regularizer = tf.contrib.layers.l1_regularizer(scale=l1wd, scope=scope)
                 reg = tf.contrib.layers.apply_regularization(the_regularizer, [eachvar])
             elif len(the_shape)==2:
                 reg = 0.0
                 for s, axis in zip(the_shape, range(len(the_shape))):
                     if s != np.prod(the_shape):
-                        t = tf.square(eachvar)
-                        t = tf.reduce_sum(t, axis=axis) + tf.constant(1.0e-8)
-                        t = tf.sqrt(t)
-                        reg = reg + tf.reduce_sum(t) * wd * np.sqrt(s)
+                        if s == 1:
+                            the_regularizer = tf.contrib.layers.l1_regularizer(scale=l1wd, scope=scope)
+                            reg = reg + tf.contrib.layers.apply_regularization(the_regularizer, [eachvar])
+                        else:
+                            t = tf.square(eachvar)
+                            t = tf.reduce_sum(t, axis=axis) + tf.constant(1.0e-8)
+                            t = tf.sqrt(t)
+                            reg = reg + tf.reduce_sum(t) * groupwd
             else:
                 raise NotImplementedError('variables with shapes > 2 is not implemented.')
 
@@ -224,7 +228,8 @@ def get_num_params():
     return num_params
 
 def zerout_gradients_for_zero_weights(grads_and_vars, zero_threshold=0.0, mode='element'):
-  """ zerout gradients for weights with zero values, so as to freeze zero weights
+  """ zerout gradients for weights with zero values, so as to freeze zero weights.
+  (make sure the history gradients are zeros too, otherwise, zero weights can still be updated in adam etc)
   Args:
       grads_and_vars: Lists of (gradient, variable).
       mode: the mode to freeze weights.

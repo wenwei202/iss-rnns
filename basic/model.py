@@ -179,8 +179,10 @@ class Model(object):
                 h = tf.concat(axis=3, values=[fw_h, bw_h])  # [N, M, JX, 2d]
             self.tensor_dict['u'] = u
             self.tensor_dict['h'] = h
-            add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
-            add_dimen_grouplasso(config.row_col_wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
+            if not config.structured_sparsity:
+                add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
+            else:
+                add_dimen_grouplasso(config.row_col_wd, config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
 
         with tf.variable_scope("main"):
             if config.dynamic_att:
@@ -223,9 +225,10 @@ class Model(object):
             flat_yp = tf.nn.softmax(flat_logits)  # [-1, M*JX]
             flat_logits2 = tf.reshape(logits2, [-1, M * JX])
             flat_yp2 = tf.nn.softmax(flat_logits2)
-
-            add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
-            add_dimen_grouplasso(config.row_col_wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
+            if not config.structured_sparsity:
+                add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
+            else:
+                add_dimen_grouplasso(config.row_col_wd, config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
 
             if config.na:
                 na_bias = tf.get_variable("na_bias", shape=[], dtype='float')
