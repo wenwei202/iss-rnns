@@ -11,7 +11,7 @@ from my.tensorflow.nn import softsel, get_logits, highway_network, multi_conv1d
 from my.tensorflow.rnn import bidirectional_dynamic_rnn
 from my.tensorflow.rnn_cell import SwitchableDropoutWrapper, AttentionCell
 from my.tensorflow import add_sparsity_regularization
-from my.tensorflow import add_dimen_grouplasso
+from my.tensorflow import add_mixedlasso
 import re
 
 SPARSITY_VARS = 'sparse_vars'
@@ -182,7 +182,7 @@ class Model(object):
             if not config.structured_sparsity:
                 add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
             else:
-                add_dimen_grouplasso(config.row_col_wd, config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
+                add_mixedlasso(config.row_col_wd, config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
 
         with tf.variable_scope("main"):
             if config.dynamic_att:
@@ -228,7 +228,7 @@ class Model(object):
             if not config.structured_sparsity:
                 add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
             else:
-                add_dimen_grouplasso(config.row_col_wd, config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
+                add_mixedlasso(config.row_col_wd, config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
 
             if config.na:
                 na_bias = tf.get_variable("na_bias", shape=[], dtype='float')
@@ -348,7 +348,7 @@ class Model(object):
             s = tf.nn.zero_fraction(train_var)
 
             # do not display bias
-            if (not re.match(".*bias.*", sp_name)) and  self.config.l1wd:
+            if (not re.match(".*bias.*", sp_name)) and  (self.config.l1wd or  self.config.row_col_wd):
                 tf.summary.scalar(sp_name + '/elt_sparsity', s)
 
             sparsity_op.append(s)

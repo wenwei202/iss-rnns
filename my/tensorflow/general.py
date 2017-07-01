@@ -171,7 +171,19 @@ def add_sparsity_regularization(wd, collection_name=None, scope=None):
         for eachvar in variables:
             tf.add_to_collection(collection_name, eachvar)
 
-def add_dimen_grouplasso(groupwd, l1wd, collection_name=None, scope=None):
+def reduce_square_sum(var, start=0, end=0, axis=0):
+    the_shape = var.get_shape().as_list()
+    if len(the_shape) == 2:
+        t = tf.square(var)
+        t = tf.reduce_sum(t, axis=axis)
+        assert(end>start and axis<2)
+        t = tf.gather_nd(t,tf.range(start, end))
+        return t
+    else:
+        raise NotImplementedError('variables with shapes != 2 is not implemented.')
+
+
+def add_mixedlasso(groupwd, l1wd, collection_name=None, scope=None):
     orig_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
     variables = []
     for eachvar in orig_variables:
