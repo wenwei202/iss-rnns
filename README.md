@@ -159,8 +159,9 @@ python -m basic.cli --mode train --noload --num_gpus 2 --batch_size 30
 # finetuning with L1
 python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 --l1wd 0.0001 --input_keep_prob 0.9 --num_gpus 2 --batch_size 30
 
-# finetuning with group lasso
-python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 --row_col_wd 0.0001 --input_keep_prob 0.9 --num_gpus 2 --batch_size 30
+# finetuning with lasso
+python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 \
+--l1wd 0.0001 --row_col_wd 0.0004 --input_keep_prob 0.9 --variational_recurrent --num_gpus 2 --batch_size 30
 
 # finetuning with zero weights frozen
 python -m basic.cli --mode train --len_opt --cluster --load_path out//basic/00/save/basic-10000 --freeze_mode element --input_keep_prob 0.9 --init_lr 0.0002 --num_gpus 2 --batch_size 30
@@ -171,8 +172,8 @@ python -m basic.cli --mode train --len_opt --cluster --load_path out//basic/00/s
 python -m basic.cli --num_gpus 2 --batch_size 30 
 
 # specify the shared json and trained model
-python -m basic.cli --len_opt --cluster --shared_path out//basic/00/shared.json --load_path out//basic/00/save/basic-10000 --num_gpus 2 --batch_size 30 --plot_weights
-
+export OUTPUT_DIR='out/';
+python -m basic.cli --len_opt --cluster --shared_path ${OUTPUT_DIR}/basic/00/shared.json --load_path ${OUTPUT_DIR}/basic/00/save/basic-10000 --num_gpus 2 --batch_size 30 --plot_weights ;
 python squad/evaluate-v1.1.py \
 $HOME/data/squad/dev-v1.1.json out/basic/00/answer/test-000000.json
 
