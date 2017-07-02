@@ -4,6 +4,7 @@ import itertools
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.rnn import BasicLSTMCell
+import json
 
 from basic.read_data import DataSet
 from my.tensorflow import get_initializer
@@ -12,6 +13,7 @@ from my.tensorflow.rnn import bidirectional_dynamic_rnn
 from my.tensorflow.rnn_cell import SwitchableDropoutWrapper, AttentionCell
 from my.tensorflow import add_sparsity_regularization
 from my.tensorflow import add_mixedlasso
+from my.tensorflow import reduce_square_sum
 import re
 
 SPARSITY_VARS = 'sparse_vars'
@@ -70,6 +72,8 @@ class Model(object):
         self.var_assignment_op = None
 
         self._build_forward()
+        if rep:
+            self._build_structure_regularization()
         self._build_loss()
         self.var_ema = None
         if rep:
@@ -259,6 +263,27 @@ class Model(object):
             self.yp = yp
             self.yp2 = yp2
             self.wyp = wyp
+
+    def _build_structure_regularization(self):
+        if self.config.group_config and self.config.structure_wd:
+            with open(self.config.group_config, 'r') as fi:
+                config_params = json.load(fi)
+                groups = config_params['groups']
+                for group in groups:
+                    sqr_sum = tf.constant(1.0e-8)
+                    for _entry in group:
+                        train_var = None
+                        for _var in tf.trainable_variables():
+                            if _entry['var_name'] == _var.op.name:
+                                train_var = _var
+                                break
+                        assert(train_var is not None)
+                        tf.add_to_collection(SPARSITY_VARS, train_var)
+                        sqr_sum = sqr_sum + reduce_square_sum(
+                            train_var, _entry['start'], _entry['end'], _entry['axis']) *  _entry['multi']
+                    sqrt_sum = tf.sqrt(sqr_sum)
+                    reg = tf.reduce_sum(sqrt_sum) * self.config.structure_wd
+                    tf.add_to_collection('losses', reg)
 
     def _build_loss(self):
         config = self.config

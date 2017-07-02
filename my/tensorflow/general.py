@@ -177,7 +177,7 @@ def reduce_square_sum(var, start=0, end=0, axis=0):
         t = tf.square(var)
         t = tf.reduce_sum(t, axis=axis)
         assert(end>start and axis<2)
-        t = tf.gather_nd(t,tf.range(start, end))
+        t = tf.gather(t,tf.range(start, end))
         return t
     else:
         raise NotImplementedError('variables with shapes != 2 is not implemented.')

@@ -48,6 +48,7 @@ flags.DEFINE_float("keep_prob", 0.8, "Keep prob for the dropout of Char-CNN weig
 flags.DEFINE_float("wd", 0.0, "L2 weight decay for regularization [0.0]")
 flags.DEFINE_float("l1wd", 0.0, "L1 weight decay for sparsity regularization [0.0]")
 flags.DEFINE_float("row_col_wd", 0.0, "Group Lasso weight decay rows and columns [0.0]")
+flags.DEFINE_float("structure_wd", 0.0, "Structure weight decay [0.0]")
 flags.DEFINE_bool("structured_sparsity", True, " | group [True]")
 flags.DEFINE_string("freeze_mode", None, "How to freeze zero weights. None | element | group [None]")
 flags.DEFINE_string("group_config", None, "The config file to set the groups for structured sparsity [None]")
