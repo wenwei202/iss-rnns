@@ -183,7 +183,7 @@ def reduce_square_sum(var, start=0, end=0, axis=0):
         raise NotImplementedError('variables with shapes != 2 is not implemented.')
 
 
-def add_mixedlasso(groupwd, l1wd, collection_name=None, scope=None):
+def add_mixedlasso(groupwd, l1wd, coef_scaling=False, collection_name=None, scope=None):
     orig_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
     variables = []
     for eachvar in orig_variables:
@@ -207,7 +207,10 @@ def add_mixedlasso(groupwd, l1wd, collection_name=None, scope=None):
                             t = tf.square(eachvar)
                             t = tf.reduce_sum(t, axis=axis) + tf.constant(1.0e-8)
                             t = tf.sqrt(t)
-                            reg = reg + tf.reduce_sum(t) * groupwd
+                            if coef_scaling:
+                                reg = reg + tf.reduce_sum(t) * groupwd * np.sqrt(s)
+                            else:
+                                reg = reg + tf.reduce_sum(t) * groupwd
             else:
                 raise NotImplementedError('variables with shapes > 2 is not implemented.')
 

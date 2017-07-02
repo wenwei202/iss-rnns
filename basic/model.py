@@ -186,7 +186,10 @@ class Model(object):
             if not config.structured_sparsity:
                 add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
             else:
-                add_mixedlasso(config.row_col_wd, config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
+                add_mixedlasso(config.row_col_wd, config.l1wd,
+                               coef_scaling=config.coef_scaling,
+                               collection_name=SPARSITY_VARS,
+                               scope=tf.get_variable_scope().name)
 
         with tf.variable_scope("main"):
             if config.dynamic_att:
@@ -232,7 +235,10 @@ class Model(object):
             if not config.structured_sparsity:
                 add_sparsity_regularization(config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
             else:
-                add_mixedlasso(config.row_col_wd, config.l1wd, collection_name=SPARSITY_VARS, scope=tf.get_variable_scope().name)
+                add_mixedlasso(config.row_col_wd, config.l1wd,
+                               coef_scaling=config.coef_scaling,
+                               collection_name=SPARSITY_VARS,
+                               scope=tf.get_variable_scope().name)
 
             if config.na:
                 na_bias = tf.get_variable("na_bias", shape=[], dtype='float')
