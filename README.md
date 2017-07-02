@@ -161,7 +161,10 @@ python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained
 
 # finetuning with lasso
 python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 \
---l1wd 0.0001 --row_col_wd 0.0004 --input_keep_prob 0.9 --variational_recurrent --num_gpus 2 --batch_size 30
+--l1wd 0.0001 --row_col_wd 0.0004 --input_keep_prob 0.9 --num_gpus 2 --batch_size 30
+
+# learning structure
+python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 --structure_wd 0.002 --input_keep_prob 0.9 --num_gpus 2 --batch_size 30 --group_config groups.json
 
 # finetuning with zero weights frozen
 python -m basic.cli --mode train --len_opt --cluster --load_path out//basic/00/save/basic-10000 --freeze_mode element --input_keep_prob 0.9 --init_lr 0.0002 --num_gpus 2 --batch_size 30
