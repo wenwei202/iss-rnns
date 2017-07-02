@@ -18,7 +18,7 @@ class Trainer(object):
         if config.freeze_mode:
             self.grads = zerout_gradients_for_zero_weights(self.grads, mode=config.freeze_mode)
         self.train_op = self.opt.apply_gradients(self.grads, global_step=self.global_step)
-        if self.config.l1wd:
+        if model.get_sparsity_op():
             with tf.control_dependencies([self.train_op]):
                 self.train_op = tf.group(self.train_op, model.get_sparsity_op())
 
@@ -64,7 +64,7 @@ class MultiGPUTrainer(object):
         if config.freeze_mode:
             self.grads = zerout_gradients_for_zero_weights(self.grads, mode=config.freeze_mode)
         self.train_op = self.opt.apply_gradients(self.grads, global_step=self.global_step)
-        if self.config.l1wd:
+        if model.get_sparsity_op():
             with tf.control_dependencies([self.train_op]):
                 self.train_op = tf.group(self.train_op, model.get_sparsity_op())
 

@@ -373,7 +373,7 @@ class Model(object):
             s = tf.nn.zero_fraction(train_var)
 
             # do not display bias
-            if (not re.match(".*bias.*", sp_name)) and  (self.config.l1wd or  self.config.row_col_wd):
+            if (not re.match(".*bias.*", sp_name)) and  (self.config.l1wd or  self.config.row_col_wd or self.config.structure_wd):
                 tf.summary.scalar(sp_name + '/elt_sparsity', s)
 
             sparsity_op.append(s)
