@@ -66,6 +66,31 @@ def plot_tensor(t,title, plot_weights=True):
   else:
     print ('ignoring %s' % title)
 
+
+def get_structure_sparsity(sess, config_file):
+    with open(config_file, 'r') as fi:
+        config_params = json.load(fi)
+        groups = config_params['groups']
+        print('structure sparsity:\n')
+        for group in groups:
+            sqr_sum = 0.0
+            for _entry in group:
+                train_var = None
+                for _var in tf.trainable_variables():
+                    if _entry['var_name'] == _var.op.name:
+                        train_var = _var
+                        break
+                assert (train_var is not None)
+                start = _entry['start']
+                end = _entry['end']
+                axis = _entry['axis']
+                assert (end > start and axis < 2)
+                params = train_var.eval(session=sess)
+                assert (len(params.shape)==2)
+                elt_pow = np.power(params, 2)
+                sqr_sum = sqr_sum + np.sum(elt_pow, axis)[start:end]
+            print('%d/%d' % (sum(sqr_sum==0), len(sqr_sum)) )
+
 def main(config):
     set_dirs(config)
     with tf.device(config.device):
@@ -212,6 +237,8 @@ def _test(config):
     for train_var in tf.trainable_variables():
         plot_tensor(train_var.eval(session=sess), train_var.op.name, config.plot_weights)
     plt.show()
+    if config.group_config:
+        get_structure_sparsity(sess, config.group_config)
 
     e = None
     for multi_batch in tqdm(test_data.get_multi_batches(config.batch_size, config.num_gpus, num_steps=num_steps, cluster=config.cluster), total=num_steps):
