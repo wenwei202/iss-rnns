@@ -72,8 +72,7 @@ class Model(object):
         self.var_assignment_op = None
 
         self._build_forward()
-        if rep:
-            self._build_structure_regularization()
+        self._build_structure_regularization()
         self._build_loss()
         self.var_ema = None
         if rep:
@@ -82,6 +81,16 @@ class Model(object):
                 self._build_ema()
             self._build_sparsity()
             self._build_var_assignment()
+
+        # only train some variables if enabled
+        if config.finetuning_config:
+            with open(self.config.finetuning_config, 'r') as fi:
+                config_params = json.load(fi)
+                included_vars = config_params['var_names']
+                self.var_list = []
+                for _var in tf.trainable_variables():
+                    if _var.op.name in included_vars:
+                        self.var_list.append(_var)
 
         self.summary = tf.summary.merge_all()
         self.summary = tf.summary.merge(tf.get_collection("summaries", scope=self.scope))

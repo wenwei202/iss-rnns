@@ -55,6 +55,7 @@ flags.DEFINE_bool("structured_sparsity", True, "[True]")
 flags.DEFINE_bool("coef_scaling", False, "Scale the penalty by the group size [True]")
 flags.DEFINE_string("freeze_mode", None, "How to freeze zero weights. None | element | group [None]")
 flags.DEFINE_string("group_config", None, "The config file to set the groups for structured sparsity [None]")
+flags.DEFINE_string("finetuning_config", None, "The config file to set the variables for finetuning [None - finetune all]")
 flags.DEFINE_float("zero_threshold", 0.0004, "The threshold to stablize zeros [0.0004]")
 flags.DEFINE_bool("plot_weights", False, "Plot the weight matrixes before test? [False]")
 

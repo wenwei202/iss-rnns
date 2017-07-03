@@ -1,0 +1,8 @@
+{
+  "var_names": [
+    "main/logits1/first/weights",
+    "main/logits1/first/biases",
+    "main/logits2/first/weights",
+    "main/logits2/first/biases"
+  ]
+}
