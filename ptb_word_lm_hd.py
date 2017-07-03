@@ -58,7 +58,8 @@ from __future__ import print_function
 
 import inspect
 import time
-import pylab
+from matplotlib import pylab
+from pylab import *
 import json
 import logging
 import numpy as np
@@ -98,8 +99,8 @@ flags.DEFINE_string("save_path", None,
 FLAGS = flags.FLAGS
 
 
-from deepos.app_agent_client import DeepOSAppAgentClient
-deepos_client = DeepOSAppAgentClient("tensorflow")
+from hyperdrive_lib.app_agent_client import HyperDriveAppAgentClient
+deepos_client = HyperDriveAppAgentClient("tensorflow")
 
 
 def add_dimen_grouplasso(var, axis=0):
@@ -733,10 +734,10 @@ def main(_):
             plot_tensor(train_var.eval(), train_var.op.name)
           plt.show()
 
-        outputs = run_epoch(session, mvalid)
-        print("Restored model with Valid Perplexity: %.3f" % (outputs['perplexity']))
-        deepos_client.send_app_stat(stat=outputs['perplexity'], epoch=0, stat_name="accuracy")
-        deepos_client.send_end_epoch(0)
+      outputs = run_epoch(session, mvalid)
+      print("Restored model with Valid Perplexity: %.3f" % (outputs['perplexity']))
+      deepos_client.send_app_stat(stat=outputs['perplexity'], epoch=0, stat_name="accuracy")
+      deepos_client.send_end_epoch(0)
 
       summary_writer = tf.summary.FileWriter(
         config_params['save_path'],
