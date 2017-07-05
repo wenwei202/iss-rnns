@@ -736,7 +736,7 @@ def main(_):
 
       outputs = run_epoch(session, mvalid)
       print("Restored model with Valid Perplexity: %.3f" % (outputs['perplexity']))
-      deepos_client.send_app_stat(stat=outputs['perplexity'], epoch=0, stat_name="accuracy")
+      deepos_client.send_app_stat(stat=-outputs['perplexity'], epoch=0, stat_name="-perplexity")
       deepos_client.send_end_epoch(0)
 
       summary_writer = tf.summary.FileWriter(
@@ -772,7 +772,7 @@ def main(_):
         print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, outputs['perplexity']))
         write_scalar_summary(summary_writer, 'ValidPerplexity', outputs['perplexity'], i + 1)
 
-        deepos_client.send_app_stat(stat=outputs['perplexity'], epoch=i+1, stat_name="accuracy")
+        deepos_client.send_app_stat(stat=-outputs['perplexity'], epoch=i+1, stat_name="-perplexity")
         deepos_client.send_end_epoch(i+1)
 
       outputs = run_epoch(session, mtest)
