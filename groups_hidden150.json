@@ -1,0 +1,73 @@
+{
+  "comments":[
+      "var_name: the name of variable",
+      "multi: the local multiplier of global decay",
+      "axis: the dimension to form groups",
+      "start(end): the start(end) index of groups"
+    ],
+  "groups":[
+    [
+      {"var_name":"main/g0/fw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":1200, "end":1350}, 
+      {"var_name":"main/g0/fw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":0, "end":150}, 
+      {"var_name":"main/g0/fw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":150, "end":300}, 
+      {"var_name":"main/g0/fw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":300, "end":450}, 
+      {"var_name":"main/g0/fw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":450, "end":600}, 
+      {"var_name":"main/g1/fw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":0, "end":150}, 
+      {"var_name":"main/g1/bw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":0, "end":150}
+    ],
+
+    [ 
+      {"var_name":"main/g0/bw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":1200, "end":1350}, 
+      {"var_name":"main/g0/bw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":0, "end":150}, 
+      {"var_name":"main/g0/bw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":150, "end":300}, 
+      {"var_name":"main/g0/bw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":300, "end":450}, 
+      {"var_name":"main/g0/bw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":450, "end":600}, 
+      {"var_name":"main/g1/fw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":150, "end":300}, 
+      {"var_name":"main/g1/bw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":150, "end":300}
+    ], 
+
+    [
+      {"var_name":"main/g1/fw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":300, "end":450}, 
+      {"var_name":"main/g1/fw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":0, "end":150}, 
+      {"var_name":"main/g1/fw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":150, "end":300}, 
+      {"var_name":"main/g1/fw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":300, "end":450}, 
+      {"var_name":"main/g1/fw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":450, "end":600}, 
+      {"var_name":"main/logits1/first/weights", "multi":1.0, "axis":1, "start":0, "end":150}, 
+      {"var_name":"main/g2/fw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":1200, "end":1350}, 
+      {"var_name":"main/g2/bw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":1200, "end":1350}, 
+      {"var_name":"main/g2/fw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":1800, "end":1950}, 
+      {"var_name":"main/g2/bw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":1800, "end":1950}
+    ],
+
+    [
+      {"var_name":"main/g1/bw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":300, "end":450}, 
+      {"var_name":"main/g1/bw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":0, "end":150}, 
+      {"var_name":"main/g1/bw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":150, "end":300}, 
+      {"var_name":"main/g1/bw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":300, "end":450}, 
+      {"var_name":"main/g1/bw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":450, "end":600}, 
+      {"var_name":"main/logits1/first/weights", "multi":1.0, "axis":1, "start":150, "end":300}, 
+      {"var_name":"main/g2/fw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":1350, "end":1500}, 
+      {"var_name":"main/g2/bw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":1350, "end":1500}, 
+      {"var_name":"main/g2/fw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":1950, "end":2100}, 
+      {"var_name":"main/g2/bw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":1950, "end":2100}
+    ],
+
+    [
+      {"var_name":"main/g2/fw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":2100, "end":2250}, 
+      {"var_name":"main/g2/fw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":0, "end":150}, 
+      {"var_name":"main/g2/fw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":150, "end":300}, 
+      {"var_name":"main/g2/fw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":300, "end":450}, 
+      {"var_name":"main/g2/fw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":450, "end":600}, 
+      {"var_name":"main/logits2/first/weights", "multi":1.0, "axis":1, "start":0, "end":150}
+    ],
+
+    [
+      {"var_name":"main/g2/bw/basic_lstm_cell/weights", "multi":1.0, "axis":1, "start":2100, "end":2250}, 
+      {"var_name":"main/g2/bw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":0, "end":150}, 
+      {"var_name":"main/g2/bw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":150, "end":300}, 
+      {"var_name":"main/g2/bw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":300, "end":450}, 
+      {"var_name":"main/g2/bw/basic_lstm_cell/weights", "multi":1.0, "axis":0, "start":450, "end":600}, 
+      {"var_name":"main/logits2/first/weights", "multi":1.0, "axis":1, "start":150, "end":300}
+    ]
+  ]
+}
