@@ -734,8 +734,10 @@ def main(_):
 
       for i in range(config.max_max_epoch):
         if 'gd' == FLAGS.optimizer:
-          # lr_decay = config.lr_decay ** max(i + 1 - config.max_epoch, 0.0)
-          lr_decay = config.lr_decay ** ( i // (config.max_max_epoch//3) )
+          if FLAGS.model == "sparselarge":
+            lr_decay = config.lr_decay ** ( i // (config.max_max_epoch//3) )
+          else:
+            lr_decay = config.lr_decay ** max(i + 1 - config.max_epoch, 0.0)
         elif 'adam' == FLAGS.optimizer:
           lr_decay = 1.0
         else:
