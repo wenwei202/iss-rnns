@@ -58,7 +58,7 @@
       {"var_name":"main/g2/fw/basic_lstm_cell/weights", "multi":2.0, "axis":0, "start":100, "end":200}, 
       {"var_name":"main/g2/fw/basic_lstm_cell/weights", "multi":2.0, "axis":0, "start":200, "end":300}, 
       {"var_name":"main/g2/fw/basic_lstm_cell/weights", "multi":2.0, "axis":0, "start":300, "end":400}, 
-      {"var_name":"main/logits2/first/weights", "multi":2.0, "ax2is":1, "start":0, "end":100}
+      {"var_name":"main/logits2/first/weights", "multi":2.0, "axis":1, "start":0, "end":100}
     ],
 
     [
