@@ -9,10 +9,20 @@ class Trainer(object):
         assert isinstance(model, Model)
         self.config = config
         self.model = model
-        self.opt = tf.train.AdamOptimizer(config.init_lr)
+        self.global_step = model.get_global_step()
+        if 'adam' == config.optimizer:
+            self.opt = tf.train.AdamOptimizer(config.init_lr)
+        elif 'gd' == config.optimizer:
+            lr = tf.train.exponential_decay(config.init_lr,
+                                            self.global_step,
+                                            tf.to_int32(config.num_steps/3),
+                                            0.1,
+                                            staircase=True)
+            self.opt = tf.train.GradientDescentOptimizer(lr)
+        else:
+            raise ValueError('Unsupported optimizer')
         self.loss = model.get_loss()
         self.var_list = model.get_var_list()
-        self.global_step = model.get_global_step()
         self.summary = model.summary
         self.grads = self.opt.compute_gradients(self.loss, var_list=self.var_list)
         if config.freeze_mode:
@@ -45,9 +55,19 @@ class MultiGPUTrainer(object):
         assert isinstance(model, Model)
         self.config = config
         self.model = model
-        self.opt = tf.train.AdamOptimizer(config.init_lr)
-        self.var_list = model.get_var_list()
         self.global_step = model.get_global_step()
+        if 'adam' == config.optimizer:
+            self.opt = tf.train.AdamOptimizer(config.init_lr)
+        elif 'gd' == config.optimizer:
+            lr = tf.train.exponential_decay(config.init_lr,
+                                            self.global_step,
+                                            tf.to_int32(config.num_steps/3),
+                                            0.1,
+                                            staircase=True)
+            self.opt = tf.train.GradientDescentOptimizer(lr)
+        else:
+            raise ValueError('Unsupported optimizer')
+        self.var_list = model.get_var_list()
         self.summary = model.summary
         self.models = models
         losses = []
