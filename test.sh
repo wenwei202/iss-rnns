@@ -1,4 +1,7 @@
 #!/bin/bash
+set -e
+set -x
+
 if [ "$#" -lt 3 ]; then
 	echo "Illegal number of parameters"
 	echo "Usage: $0 OUTPUT_DIR HIDDEN_SIZE GROUP_CONFIG"
@@ -16,6 +19,7 @@ python -m basic.cli --len_opt --cluster \
 --num_gpus 2 --batch_size 30 \
 --hidden_size ${HIDDEN_SIZE} \
 --plot_weights \
+--zero_threshold 0.0004 \
 --group_config ${GROUP_CONFIG}
 
 python squad/evaluate-v1.1.py \

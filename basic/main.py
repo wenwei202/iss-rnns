@@ -17,7 +17,7 @@ from basic.read_data import read_data, get_squad_data_filter, update_config
 from my.tensorflow import get_num_params
 import matplotlib.pyplot as plt
 
-def plot_tensor(t,title, plot_weights=True):
+def plot_tensor(t,title, plot_weights=True, hidden_size=100):
   if len(t.shape)==2:
     print(title)
     t = np.abs(t) > 0.0
@@ -50,19 +50,19 @@ def plot_tensor(t,title, plot_weights=True):
     plt.imshow(zero_map_cp,cmap=plt.get_cmap('gray'),interpolation='none')
     plt.title(col_sparsity + row_sparsity)
 
-    if 2*t.shape[0] == t.shape[1]:
-      subsize = int(t.shape[0]/2)
+    if 4*hidden_size == t.shape[1]:
+      subsize = int(t.shape[1]/4)
       match_map = np.zeros(subsize,dtype=np.int)
-      match_map = match_map + row_zero_idx[subsize:2 * subsize]
+      match_map = match_map + row_zero_idx[t.shape[0]-subsize:]
       for blk in range(0,4):
         match_map = match_map + col_zero_idx[blk*subsize : blk*subsize+subsize]
       match_idx = np.where(match_map == 5)[0]
-      zero_map[subsize+match_idx,:] = False
+      zero_map[t.shape[0]-subsize+match_idx,:] = False
       for blk in range(0, 4):
         zero_map[:,blk*subsize+match_idx] = False
       plt.subplot(3, 1, 3)
       plt.imshow(zero_map, cmap=plt.get_cmap('Reds'), interpolation='none')
-      plt.title(' %d/%d matches' % (len(match_idx), sum(row_zero_idx[subsize:subsize*2])))
+      plt.title(' %d/%d matches' % (len(match_idx), sum(row_zero_idx[t.shape[0]-subsize:])))
   else:
     print ('ignoring %s' % title)
 
@@ -171,7 +171,9 @@ def _train(config):
 
     # plot weights
     for train_var in tf.trainable_variables():
-      plot_tensor(train_var.eval(session=sess), train_var.op.name, config.plot_weights)
+      plot_tensor(train_var.eval(session=sess), train_var.op.name,
+                  plot_weights=config.plot_weights,
+                  hidden_size=config.hidden_size)
 
     # Begin training
     num_steps = config.num_steps or int(math.ceil(train_data.num_examples / (config.batch_size * config.num_gpus))) * config.num_epochs
@@ -241,7 +243,9 @@ def _test(config):
 
     # plot weights
     for train_var in tf.trainable_variables():
-        plot_tensor(train_var.eval(session=sess), train_var.op.name, config.plot_weights)
+        plot_tensor(train_var.eval(session=sess), train_var.op.name,
+                    plot_weights=config.plot_weights,
+                    hidden_size=config.hidden_size)
     plt.show()
     if config.group_config:
         get_structure_sparsity(sess, config.group_config)
