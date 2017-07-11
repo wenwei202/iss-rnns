@@ -71,9 +71,11 @@ def get_structure_sparsity(sess, config_file):
     with open(config_file, 'r') as fi:
         config_params = json.load(fi)
         groups = config_params['groups']
+        group_sizes = []
         print('structure sparsity:\n')
         for group in groups:
             sqr_sum = 0.0
+            group_size = 0
             for _entry in group:
                 train_var = None
                 for _var in tf.trainable_variables():
@@ -89,7 +91,11 @@ def get_structure_sparsity(sess, config_file):
                 assert (len(params.shape)==2)
                 elt_pow = np.power(params, 2)
                 sqr_sum = sqr_sum + np.sum(elt_pow, axis)[start:end]
+                group_size += params.shape[axis]
             print('%d/%d' % (sum(sqr_sum==0), len(sqr_sum)) )
+            group_sizes.append(group_size)
+        print('group sizes:')
+        print(group_sizes)
 
 def main(config):
     set_dirs(config)
