@@ -653,6 +653,8 @@ def write_scalar_summary(summary_writer, tag, value, step):
   summary_writer.add_summary(summary, step)
 
 def main(_):
+  deepos_client.register_app_stat(stat_name="perplexity", greater_is_better=False, primary_stat=True)
+  deepos_client.register_app_stat(stat_name="total_cost", greater_is_better=False, primary_stat=False)
   if not FLAGS.data_path:
     raise ValueError("Must set --data_path to PTB data directory")
   if not FLAGS.config_file:
@@ -736,7 +738,8 @@ def main(_):
 
       outputs = run_epoch(session, mvalid)
       print("Restored model with Valid Perplexity: %.3f" % (outputs['perplexity']))
-      deepos_client.send_app_stat(stat=outputs['perplexity'], epoch=0, stat_name="accuracy")
+      deepos_client.send_app_stat(stat=outputs['perplexity'], epoch=0, stat_name="perplexity")
+      deepos_client.send_app_stat(stat=outputs['total_cost'], epoch=0, stat_name="total_cost")
       deepos_client.send_end_epoch(0)
 
       summary_writer = tf.summary.FileWriter(
@@ -774,7 +777,8 @@ def main(_):
         print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, outputs['perplexity']))
         write_scalar_summary(summary_writer, 'ValidPerplexity', outputs['perplexity'], i + 1)
 
-        deepos_client.send_app_stat(stat=outputs['perplexity'], epoch=i+1, stat_name="accuracy")
+        deepos_client.send_app_stat(stat=outputs['perplexity'], epoch=i+1, stat_name="perplexity")
+        deepos_client.send_app_stat(stat=outputs['total_cost'], epoch=i+1, stat_name="total_cost")
         deepos_client.send_end_epoch(i+1)
 
       outputs = run_epoch(session, mtest)
