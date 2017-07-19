@@ -75,7 +75,8 @@ class Model(object):
 
         self._build_forward()
         self._build_structure_regularization()
-        self._build_structure_coordinator()
+        if config.mode == 'test':
+            self._build_structure_coordinator()
         self._build_loss()
         self.var_ema = None
         if rep:
