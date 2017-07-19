@@ -12,6 +12,10 @@ VERY_SMALL_NUMBER = 1e-30
 VERY_POSITIVE_NUMBER = VERY_BIG_NUMBER
 VERY_NEGATIVE_NUMBER = -VERY_BIG_NUMBER
 
+def add_summary_zero_fraction(t, threshold=0.0):
+    tf.summary.scalar(t.op.name+'/sparsity',
+                      tf.nn.zero_fraction(tf.cast(tf.greater(tf.abs(t), threshold), tf.int8))
+                      )
 
 def get_initializer(matrix):
     def _initializer(shape, dtype=None, partition_info=None, **kwargs): return matrix

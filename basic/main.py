@@ -72,7 +72,7 @@ def get_structure_sparsity(sess, config_file):
         config_params = json.load(fi)
         groups = config_params['groups']
         group_sizes = []
-        print('structure sparsity:\n')
+        print('structure sparsity:')
         for group in groups:
             sqr_sum = 0.0
             group_size = 0
@@ -254,6 +254,9 @@ def _test(config):
                     hidden_size=config.hidden_size)
     plt.show()
     if config.group_config:
+        get_structure_sparsity(sess, config.group_config)
+        print('Structure coordinating...')
+        sess.run([model.get_var_structure_coordinate_op()])
         get_structure_sparsity(sess, config.group_config)
 
     e = None

@@ -14,6 +14,7 @@ from my.tensorflow.rnn_cell import SwitchableDropoutWrapper, AttentionCell
 from my.tensorflow import add_sparsity_regularization
 from my.tensorflow import add_mixedlasso
 from my.tensorflow import reduce_square_sum
+from my.tensorflow.general import add_summary_zero_fraction
 import re
 
 SPARSITY_VARS = 'sparse_vars'
@@ -70,9 +71,11 @@ class Model(object):
         self.sparsity_op = None
 
         self.var_assignment_op = None
+        self.var_structure_coordinate_op = None
 
         self._build_forward()
         self._build_structure_regularization()
+        self._build_structure_coordinator()
         self._build_loss()
         self.var_ema = None
         if rep:
@@ -300,6 +303,45 @@ class Model(object):
                     reg = tf.reduce_sum(sqrt_sum) * self.config.structure_wd
                     tf.add_to_collection('losses', reg)
 
+    def _build_structure_coordinator(self):
+        # we made lots of assumption on the groups and may not work in general
+        if self.config.group_config:
+            with open(self.config.group_config, 'r') as fi:
+                config_params = json.load(fi)
+                groups = config_params['groups']
+                _coordinate_ops = []
+                for group in groups:
+                    sqr_sum = tf.constant(0.0)
+                    for _entry in group[0:1]+group[5:]:
+                        train_var = None
+                        for _var in tf.trainable_variables():
+                            if _entry['var_name'] == _var.op.name:
+                                train_var = _var
+                                break
+                        assert(train_var is not None)
+                        sqr_sum = sqr_sum + reduce_square_sum(
+                            train_var, _entry['start'], _entry['end'], _entry['axis'])
+                    #sqr_sum = tf.constant(0.0, shape=[100])
+                    index = tf.equal(sqr_sum, 0.0)
+
+                    train_var = None
+                    for _entry in group[1:5]:
+                        for _var in tf.trainable_variables():
+                            if _entry['var_name'] == _var.op.name:
+                                assert ( (train_var is None) or (train_var == _var))
+                                train_var = _var
+                                break
+                        assert(train_var is not None)
+                        assert(_entry['axis']==0)
+
+                    index = tf.tile(index,[4])
+                    var_t = tf.transpose(train_var)
+                    var_t = tf.where(index, tf.zeros_like(var_t), var_t)
+                    var_t = tf.transpose(var_t)
+                    train_var = tf.assign(train_var, var_t)
+                    _coordinate_ops.append(train_var)
+                self.var_structure_coordinate_op = tf.group(*_coordinate_ops)
+
     def _build_loss(self):
         config = self.config
         JX = tf.shape(self.x)[2]
@@ -409,6 +451,9 @@ class Model(object):
 
     def get_var_assignment_op(self):
         return self.var_assignment_op
+
+    def get_var_structure_coordinate_op(self):
+        return self.var_structure_coordinate_op
 
     def get_global_step(self):
         return self.global_step
