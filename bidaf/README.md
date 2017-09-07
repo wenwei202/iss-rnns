@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# iss-rnns
-=======
 # Bi-directional Attention Flow for Machine Comprehension
  
 - This the original implementation of [Bi-directional Attention Flow for Machine Comprehension][paper] (Seo et al., 2016).
@@ -193,4 +190,3 @@ $HOME/data/squad/dev-v1.1.json out/basic/00/answer/test-000000.json
 [minjoon]: https://seominjoon.github.io
 [minjoon-github]: https://github.com/seominjoon
 [v0.2.1]: https://github.com/allenai/bi-att-flow/tree/v0.2.1
->>>>>>> 07f77e8c32a74580e2bf8ffce97abbe4f081da0b
