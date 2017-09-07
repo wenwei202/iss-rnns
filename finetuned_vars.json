@@ -1,0 +1,12 @@
+{
+  "var_names": [
+    "main/logits1/first/weights",
+    "main/logits1/first/biases",
+    "main/g2/fw/basic_lstm_cell/weights",
+    "main/g2/fw/basic_lstm_cell/biases",
+    "main/g2/bw/basic_lstm_cell/weights",
+    "main/g2/bw/basic_lstm_cell/biases",
+    "main/logits2/first/weights",
+    "main/logits2/first/biases"
+  ]
+}
