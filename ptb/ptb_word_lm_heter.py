@@ -93,8 +93,6 @@ flags.DEFINE_string("optimizer", 'gd',
                     "Optimizer of sgd: gd and adam.")
 flags.DEFINE_string("freeze_mode", None,
                     "How to freeze zero weights.")
-flags.DEFINE_integer("freeze_block_size", 0,
-                    "The size of blocks to explore diagnal sparse blocks.")
 
 FLAGS = flags.FLAGS
 
@@ -160,61 +158,6 @@ def add_blockwise_grouplasso(t, block_row_size, block_col_size):
           total_blocks = total_blocks + 1.0
     return reg_sum, zero_blocks/total_blocks
 
-def block_diagonal(matrices, dtype=tf.float32):
-  r"""Constructs block-diagonal matrices from a list of batched 2D tensors.
-
-  Args:
-    matrices: A list of Tensors with shape [..., N_i, M_i] (i.e. a list of
-      matrices with the same batch dimension).
-    dtype: Data type to use. The Tensors in `matrices` must match this dtype.
-  Returns:
-    A matrix with the input matrices stacked along its main diagonal, having
-    shape [..., \sum_i N_i, \sum_i M_i].
-
-  """
-  matrices = [tf.convert_to_tensor(matrix, dtype=dtype) for matrix in matrices]
-  blocked_rows = tf.Dimension(0)
-  blocked_cols = tf.Dimension(0)
-  batch_shape = tf.TensorShape(None)
-  for matrix in matrices:
-    full_matrix_shape = matrix.get_shape().with_rank_at_least(2)
-    batch_shape = batch_shape.merge_with(full_matrix_shape[:-2])
-    blocked_rows += full_matrix_shape[-2]
-    blocked_cols += full_matrix_shape[-1]
-  ret_columns_list = []
-  for matrix in matrices:
-    matrix_shape = tf.shape(matrix)
-    ret_columns_list.append(matrix_shape[-1])
-  ret_columns = tf.add_n(ret_columns_list)
-  row_blocks = []
-  current_column = 0
-  for matrix in matrices:
-    matrix_shape = tf.shape(matrix)
-    row_before_length = current_column
-    current_column += matrix_shape[-1]
-    row_after_length = ret_columns - current_column
-    row_blocks.append(tf.pad(
-        tensor=matrix,
-        paddings=tf.concat(
-            [tf.zeros([tf.rank(matrix) - 1, 2], dtype=tf.int32),
-             [(row_before_length, row_after_length)]],
-            axis=0)))
-  blocked = tf.concat(row_blocks, -2)
-  blocked.set_shape(batch_shape.concatenate((blocked_rows, blocked_cols)))
-  return blocked
-
-def get_masked_weights(var, block_size):
-  shape = var.get_shape().as_list()
-  assert (len(shape)==2)
-  hidden_num = shape[1]/4
-  assert (hidden_num%block_size==0)
-  block_num = hidden_num/block_size
-  matrices = [tf.ones([block_size,block_size])] * int(block_num)
-  blk_diag_mat = block_diagonal(matrices)
-  blk_diag_mat = tf.tile(blk_diag_mat, [1,4])
-  blk_diag_mat = tf.concat([tf.ones([shape[0]-hidden_num, shape[1]]), blk_diag_mat], 0)
-  return blk_diag_mat * var
-
 def plot_tensor(t,title):
   if len(t.shape)==2:
     print(title)
@@ -275,7 +218,7 @@ def zerout_gradients_for_zero_weights(grads_and_vars, mode='element'):
       continue
 
     if mode=='element':
-      where_cond = tf.less_equal(tf.abs(variable), 0.0)
+      where_cond = tf.less(tf.abs(variable), zero_threshold)
     elif mode=='group':
       raise NotImplementedError('Group wise freezing is not implemented yet.')
     else:
@@ -441,18 +384,6 @@ class PTBModel(object):
     self._cost = cost = tf.reduce_sum(loss) / batch_size
     self._final_state = state
 
-    self._mask_out_op = None
-    if FLAGS.freeze_block_size > 0:
-      mask_out_ops = []
-      for train_var in tf.trainable_variables():
-        if train_var.op.name in ['Model/RNN/multi_rnn_cell/cell_0/basic_lstm_cell/weights',
-                                 'Model/RNN/multi_rnn_cell/cell_1/basic_lstm_cell/weights']:
-          train_var = tf.assign(train_var,
-                        get_masked_weights(train_var, FLAGS.freeze_block_size))
-          mask_out_ops.append(train_var)
-      if len(mask_out_ops):
-        self._mask_out_op = tf.group(*mask_out_ops)
-
     if not is_training:
       return
 
@@ -501,10 +432,6 @@ class PTBModel(object):
   @property
   def sparsity(self):
     return self._sparsity
-
-  @property
-  def mask_out_op(self):
-    return self._mask_out_op
 
   @property
   def final_state(self):
@@ -788,17 +715,6 @@ def main(_):
     with tf.Session(config=config_proto) as session:
       coord = tf.train.Coordinator()
       session.run(init)
-
-      if FLAGS.freeze_block_size:
-        if FLAGS.display_weights:
-          for train_var in tf.trainable_variables():
-            plot_tensor(train_var.eval(), train_var.op.name)
-        session.run(m.mask_out_op)
-        if FLAGS.display_weights:
-          for train_var in tf.trainable_variables():
-            plot_tensor(train_var.eval(), train_var.op.name)
-          plt.show()
-
       threads = tf.train.start_queue_runners(sess=session, coord=coord)
       if FLAGS.restore_path:
         restore_trainables(session, FLAGS.restore_path)
@@ -818,8 +734,10 @@ def main(_):
 
       for i in range(config.max_max_epoch):
         if 'gd' == FLAGS.optimizer:
-          # lr_decay = config.lr_decay ** max(i + 1 - config.max_epoch, 0.0)
-          lr_decay = config.lr_decay ** ( i // (config.max_max_epoch//3) )
+          if FLAGS.model == "sparselarge":
+            lr_decay = config.lr_decay ** ( i // (config.max_max_epoch//3) )
+          else:
+            lr_decay = config.lr_decay ** max(i + 1 - config.max_epoch, 0.0)
         elif 'adam' == FLAGS.optimizer:
           lr_decay = 1.0
         else:
