@@ -21,7 +21,7 @@ To freeze zero weights during finetuning, we can use `--freeze_mode element`.
 ```
 python ptb_word_lm_heter.py \
 --model large \
---data_path simple-examples/data/ 
+--data_path simple-examples/data/ \
 --hidden_size1 373 \
 --hidden_size2 315 \
 --config_file from_scratch.json 
