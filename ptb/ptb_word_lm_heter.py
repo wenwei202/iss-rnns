@@ -93,6 +93,10 @@ flags.DEFINE_string("optimizer", 'gd',
                     "Optimizer of sgd: gd and adam.")
 flags.DEFINE_string("freeze_mode", None,
                     "How to freeze zero weights.")
+flags.DEFINE_integer("hidden_size1", 1500,
+                    "The hidden size of the first LSTM.")
+flags.DEFINE_integer("hidden_size2", 1500,
+                    "The hidden size of the second LSTM.")
 
 FLAGS = flags.FLAGS
 
@@ -261,7 +265,7 @@ class PTBModel(object):
     # Slightly better results can be obtained with forget gate biases
     # initialized to 1 but the hyperparameters of the model would need to be
     # different than reported in the paper.
-    def lstm_cell():
+    def lstm_cell(size):
       # With the latest TensorFlow source code (as of Mar 27, 2017),
       # the BasicLSTMCell will need a reuse parameter which is unfortunately not
       # defined in TensorFlow 1.0. To maintain backwards compatibility, we add
@@ -276,11 +280,11 @@ class PTBModel(object):
             size, forget_bias=0.0, state_is_tuple=True)
     attn_cell = lstm_cell
     if is_training and config.keep_prob < 1:
-      def attn_cell():
+      def attn_cell(size):
         return tf.contrib.rnn.DropoutWrapper(
-            lstm_cell(), output_keep_prob=config.keep_prob)
+            lstm_cell(size), output_keep_prob=config.keep_prob)
     cell = tf.contrib.rnn.MultiRNNCell(
-        [attn_cell() for _ in range(config.num_layers)], state_is_tuple=True)
+        [attn_cell(FLAGS.hidden_size1), attn_cell(FLAGS.hidden_size2)], state_is_tuple=True)
 
     self._initial_state = cell.zero_state(batch_size, data_type())
 
@@ -309,9 +313,9 @@ class PTBModel(object):
         (cell_output, state) = cell(inputs[:, time_step, :], state)
         outputs.append(cell_output)
 
-    output = tf.reshape(tf.stack(axis=1, values=outputs), [-1, size])
+    output = tf.reshape(tf.stack(axis=1, values=outputs), [-1, FLAGS.hidden_size2])
     softmax_w = tf.get_variable(
-        "softmax_w", [size, vocab_size], dtype=data_type())
+        "softmax_w", [FLAGS.hidden_size2, vocab_size], dtype=data_type())
     softmax_b = tf.get_variable("softmax_b", [vocab_size], dtype=data_type())
     logits = tf.matmul(output, softmax_w) + softmax_b
     loss = tf.contrib.legacy_seq2seq.sequence_loss_by_example(
