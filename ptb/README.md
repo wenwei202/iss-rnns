@@ -9,6 +9,10 @@ This is code from https://www.tensorflow.org/tutorials/recurrent
 ```
 python ptb_word_lm.py --model sparselarge \
 --data_path simple-examples/data/  \
---restore_path ${HOME}/trained_models/ptb/ptb_large_baseline/ \
 --config_file structure_grouplasso.json 
 ```
+To finetune a model, we can restore the model by `--restore_path ${HOME}/trained_models/ptb/ptb_large_baseline/`, which points the path of checkpoint files of `model.ckpt-xxx`.
+
+To freeze zero weights during finetuning, we can use `--freeze_mode element`.
+
+`python ptb_word_lm.py --help` for more help.
