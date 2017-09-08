@@ -16,3 +16,10 @@ To finetune a model, we can restore the model by `--restore_path ${HOME}/trained
 To freeze zero weights during finetuning, we can use `--freeze_mode element`.
 
 `python ptb_word_lm.py --help` for more help.
+
+`run.sh` is a bash script to configure and automate it.
+```
+vi run.sh # to configure
+chmod u+x run.sh
+./run.sh
+```
