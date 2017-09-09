@@ -168,37 +168,41 @@ def plot_tensor(t,title):
 
     plt.figure()
 
-    t = (t != 0)
+    t = - (t != 0).astype(int)
     weight_scope = abs(t).max()
-    plt.subplot(3, 1, 1)
+    plt.subplot(2, 1, 1)
     plt.imshow(t.reshape((t.shape[0], -1)),
                vmin=-weight_scope,
                vmax=weight_scope,
-               cmap=plt.get_cmap('binary'),
+               cmap=plt.get_cmap('bwr'),
                interpolation='none')
     plt.title(title)
 
-    col_zero_map = np.tile(col_zero_idx, (t.shape[0], 1))
-    row_zero_map = np.tile(row_zero_idx.reshape((t.shape[0], 1)), (1, t.shape[1]))
-    zero_map = col_zero_map + row_zero_map
-    zero_map_cp = zero_map.copy()
-    plt.subplot(3,1,2)
-    plt.imshow(zero_map_cp,cmap=plt.get_cmap('gray'),interpolation='none')
-    plt.title(col_sparsity + row_sparsity)
+#    col_zero_map = np.tile(col_zero_idx, (t.shape[0], 1))
+#    row_zero_map = np.tile(row_zero_idx.reshape((t.shape[0], 1)), (1, t.shape[1]))
+#    zero_map = col_zero_map + row_zero_map
+#    zero_map_cp = zero_map.copy()
+#    plt.subplot(3,1,2)
+#    plt.imshow(zero_map_cp,cmap=plt.get_cmap('gray'),interpolation='none')
+#    plt.title(col_sparsity + row_sparsity)
 
     if 2*t.shape[0] == t.shape[1]:
+      zero_map =  - np.ones_like(t)
       subsize = int(t.shape[0]/2)
       match_map = np.zeros(subsize,dtype=np.int)
       match_map = match_map + row_zero_idx[subsize:2 * subsize]
       for blk in range(0,4):
         match_map = match_map + col_zero_idx[blk*subsize : blk*subsize+subsize]
       match_idx = np.where(match_map == 5)[0]
-      zero_map[subsize+match_idx,:] = False
+      zero_map[subsize+match_idx,:] = 0
       for blk in range(0, 4):
-        zero_map[:,blk*subsize+match_idx] = False
-      plt.subplot(3, 1, 3)
-      plt.imshow(zero_map, cmap=plt.get_cmap('Reds'), interpolation='none')
-      plt.title(' %d/%d matches' % (len(match_idx), sum(row_zero_idx[subsize:subsize*2])))
+        zero_map[:,blk*subsize+match_idx] = 0
+      plt.subplot(2, 1, 2)
+      plt.imshow(zero_map,
+                 vmin=-1,
+                 vmax=1,
+                 cmap=plt.get_cmap('bwr'), interpolation='none')
+      #plt.title(' %d/%d matches' % (len(match_idx), sum(row_zero_idx[subsize:subsize*2])))
   else:
     print ('ignoring %s' % title)
 
