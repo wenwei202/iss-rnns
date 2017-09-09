@@ -117,7 +117,7 @@ def add_structure_grouplasso(var, coupled_var, couple_split_num=2):
 
       t2 = tf.square(coupled_var)
       t2_row_sum = tf.reduce_sum(t2, axis=1)
-      t2_row_sums = zip(tf.split(t2_row_sum, couple_split_num))
+      t2_row_sums = list(zip(tf.split(t2_row_sum, couple_split_num)))
 
       reg_sum = t1_row_sum2 + \
                 t1_col_sum1 + t1_col_sum2 + t1_col_sum3 + t1_col_sum4 + \
