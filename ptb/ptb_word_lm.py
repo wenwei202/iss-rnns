@@ -158,11 +158,13 @@ def add_blockwise_grouplasso(t, block_row_size, block_col_size):
           total_blocks = total_blocks + 1.0
     return reg_sum, zero_blocks/total_blocks
 
-def plot_tensor(t,title):
+def plot_tensor(t,title, coupled_t, coupled_iss=None):
   if len(t.shape)==2:
     print(title)
     col_zero_idx = np.sum(np.abs(t), axis=0) == 0
     row_zero_idx = np.sum(np.abs(t), axis=1) == 0
+    if coupled_t is not None:
+      coupled_row_zero_idx = np.sum(np.abs(coupled_t), axis=1) == 0
     col_sparsity = (' column sparsity: %d/%d' % (sum(col_zero_idx), t.shape[1]) )
     row_sparsity = (' row sparsity: %d/%d' % (sum(row_zero_idx), t.shape[0]) )
 
@@ -186,25 +188,32 @@ def plot_tensor(t,title):
 #    plt.imshow(zero_map_cp,cmap=plt.get_cmap('gray'),interpolation='none')
 #    plt.title(col_sparsity + row_sparsity)
 
+    zero_map = - 128*np.ones_like(t)
+    if coupled_iss is not None:
+      zero_map[coupled_iss, :] = 32
+    match_idx = None
     if 2*t.shape[0] == t.shape[1]:
-      zero_map =  - np.ones_like(t)
       subsize = int(t.shape[0]/2)
       match_map = np.zeros(subsize,dtype=np.int)
       match_map = match_map + row_zero_idx[subsize:2 * subsize]
+      match_map = match_map + coupled_row_zero_idx[0:subsize]
       for blk in range(0,4):
         match_map = match_map + col_zero_idx[blk*subsize : blk*subsize+subsize]
-      match_idx = np.where(match_map == 5)[0]
+      match_idx = np.where(match_map == 6)[0]
+
       zero_map[subsize+match_idx,:] = 0
       for blk in range(0, 4):
         zero_map[:,blk*subsize+match_idx] = 0
-      plt.subplot(2, 1, 2)
-      plt.imshow(zero_map,
-                 vmin=-1,
-                 vmax=1,
+    plt.subplot(2, 1, 2)
+    plt.imshow(zero_map,
+                 vmin=-128,
+                 vmax=128,
                  cmap=plt.get_cmap('bwr'), interpolation='none')
-      #plt.title(' %d/%d matches' % (len(match_idx), sum(row_zero_idx[subsize:subsize*2])))
+    #plt.title(' %d/%d matches' % (len(match_idx), sum(row_zero_idx[subsize:subsize*2])))
+    return match_idx
   else:
     print ('ignoring %s' % title)
+  return None
 
 def zerout_gradients_for_zero_weights(grads_and_vars, mode='element'):
   """ zerout gradients for weights with zero values, so as to freeze zero weights
@@ -725,8 +734,13 @@ def main(_):
         if FLAGS.display_weights:
           outputs = fetch_sparsity(session, mtest)
           print("Sparsity: %s" % outputs['sparsity'])
-          for train_var in tf.trainable_variables():
-            plot_tensor(train_var.eval(), train_var.op.name)
+          #for train_var in tf.trainable_variables():
+          #  plot_tensor(train_var.eval(), train_var.op.name)
+          var_list = tf.trainable_variables()
+          coupled_iss = None
+          coupled_iss = plot_tensor(var_list[1].eval(), var_list[1].op.name, var_list[3].eval(), coupled_iss)
+          coupled_iss = plot_tensor(var_list[3].eval(), var_list[3].op.name, var_list[5].eval(), coupled_iss)
+          coupled_iss = plot_tensor(var_list[5].eval(), var_list[5].op.name, None, coupled_iss)
           plt.show()
 
         outputs = run_epoch(session, mvalid)
