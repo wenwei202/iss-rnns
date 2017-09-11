@@ -173,7 +173,7 @@ def plot_tensor(t,title, coupled_t, coupled_iss=None):
     t = - (t != 0).astype(int)
     weight_scope = abs(t).max()
     plt.subplot(2, 1, 1)
-    plt.imshow(t.reshape((t.shape[0], -1))[::8,::8],
+    plt.imshow(t.reshape((t.shape[0], -1))[::10,::10],
                vmin=-weight_scope,
                vmax=weight_scope,
                cmap=plt.get_cmap('bwr'),
@@ -207,7 +207,7 @@ def plot_tensor(t,title, coupled_t, coupled_iss=None):
       for blk in range(0, 4):
         zero_map[:,blk*subsize+match_idx] = 0
     plt.subplot(2, 1, 2)
-    plt.imshow(zero_map[::8,::8],
+    plt.imshow(zero_map[::10,::10],
                  vmin=-128,
                  vmax=128,
                  cmap=plt.get_cmap('bwr'), interpolation='none')
