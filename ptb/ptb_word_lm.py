@@ -173,12 +173,13 @@ def plot_tensor(t,title, coupled_t, coupled_iss=None):
     t = - (t != 0).astype(int)
     weight_scope = abs(t).max()
     plt.subplot(2, 1, 1)
-    plt.imshow(t.reshape((t.shape[0], -1)),
+    plt.imshow(t.reshape((t.shape[0], -1))[::8,::8],
                vmin=-weight_scope,
                vmax=weight_scope,
                cmap=plt.get_cmap('bwr'),
                interpolation='none')
-    plt.title(title)
+    plt.tick_params(top='off', bottom='off', left='off', right='off', labelleft='off', labelbottom='off')
+    #plt.title(title)
 
 #    col_zero_map = np.tile(col_zero_idx, (t.shape[0], 1))
 #    row_zero_map = np.tile(row_zero_idx.reshape((t.shape[0], 1)), (1, t.shape[1]))
@@ -190,7 +191,7 @@ def plot_tensor(t,title, coupled_t, coupled_iss=None):
 
     zero_map = - 128*np.ones_like(t)
     if coupled_iss is not None:
-      zero_map[coupled_iss, :] = 32
+      zero_map[coupled_iss, :] = 0
     match_idx = None
     if 2*t.shape[0] == t.shape[1]:
       subsize = int(t.shape[0]/2)
@@ -200,15 +201,17 @@ def plot_tensor(t,title, coupled_t, coupled_iss=None):
       for blk in range(0,4):
         match_map = match_map + col_zero_idx[blk*subsize : blk*subsize+subsize]
       match_idx = np.where(match_map == 6)[0]
+      print(sum(match_map==6))
 
       zero_map[subsize+match_idx,:] = 0
       for blk in range(0, 4):
         zero_map[:,blk*subsize+match_idx] = 0
     plt.subplot(2, 1, 2)
-    plt.imshow(zero_map,
+    plt.imshow(zero_map[::8,::8],
                  vmin=-128,
                  vmax=128,
                  cmap=plt.get_cmap('bwr'), interpolation='none')
+    plt.tick_params(top='off', bottom='off', left='off', right='off', labelleft='off', labelbottom='off')
     #plt.title(' %d/%d matches' % (len(match_idx), sum(row_zero_idx[subsize:subsize*2])))
     return match_idx
   else:
