@@ -8,6 +8,17 @@ Use `python ptb_word_lm.py --help` for usage.
 ./get_ptd_data.sh
 ```
 # To run
+## learning non-structurally sparse LSTMs with L1-norm regularization
+Finetuning trained model by L1-norm regularization
+```
+python ptb_word_lm.py --model sparselarge \
+--data_path simple-examples/data/ \
+--restore_path  ~/trained_models/ptb/ptb_large_baseline/  \
+--config_file l1.json
+```
+Weight decay of L1-norm, dropout, etc., are configured in `l1.json`.
+
+## learning ISS with group Lasso regularization
 ```
 python ptb_word_lm.py --model sparselarge \
 --data_path simple-examples/data/  \
