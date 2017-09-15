@@ -75,6 +75,7 @@ python -m basic.cli --len_opt --cluster \
 # Test by multi-gpus
 python -m basic.cli --len_opt --cluster \
 --num_gpus 2 --batch_size 30 \
+--zero_threshold 0.02 \ # zero out small weights whose absolute values are <0.02
 --shared_path out/${TIMESTAMP}/basic/00/shared.json \
 --load_path out/${TIMESTAMP}/basic/00/save/basic-10000 # the model saved at step 10000
 ```
