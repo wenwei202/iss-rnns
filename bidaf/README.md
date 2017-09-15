@@ -5,7 +5,7 @@
 
 Use `python -m basic.cli --help` for usage.
 
-## 0. Requirements
+## Requirements
 #### General
 - Python (developed on 3.5.2. Issues have been reported with Python 2!)
 - unzip
@@ -16,7 +16,7 @@ Use `python -m basic.cli --help` for usage.
 - tqdm (progress bar, verified on 4.7.4)
 - jinja2 (for visaulization; if you only train and test, not needed)
 
-## 1. Pre-processing
+## Pre-processing
 First, prepare data. Donwload SQuAD data and GloVe and nltk corpus
 (~850 MB, this will download files to `$HOME/data`):
 ```
@@ -28,7 +28,7 @@ Second, Preprocess Stanford QA dataset (along with GloVe vectors) and save them 
 python -m squad.prepro
 ```
 
-## 2. Training BiDAF baseline
+## Training BiDAF baseline
 Note that the training script saves results in a subfolder of `out` named as `${TIMESTAMP}` (e.g. `out/2017-07-10___21-37-44/`). Before running, please:
 ```
 mkdir out
@@ -63,7 +63,7 @@ This can be easily done by running:
 python -m basic.cli --mode train --noload --num_gpus 2 --batch_size 30
 ```
 
-## 3. Test
+## Test
 To test, run:
 ```
 # run test by specifying the shared json and trained model
@@ -107,9 +107,9 @@ python -m basic.cli --mode test --batch_size 8 --eval_num_batches 0 --load_step 
 python -m basic.cli --mode train --len_opt --cluster \
 --num_gpus 2 --batch_size 30 \
 --input_keep_prob 0.9 \
---load_path out/${TIMESTAMP}/basic/00/save \ # fine-tune baseline, use [--noload] if traing from scratch
+--load_path out/${TIMESTAMP}/basic/00/save \ # fine-tune baseline, use [--noload] if train from scratch
 --structure_wd 0.001 \ # the hyperparameter to make trade-off between sparsity and EM/F1 performance
---group_config roups_hidden100.json
+--group_config groups_hidden100.json # the json to specify ISS structures for LSTMs
 ```
 
 
