@@ -79,6 +79,18 @@ python -m basic.cli --len_opt --cluster \
 --shared_path out/${TIMESTAMP}/basic/00/shared.json \
 --load_path out/${TIMESTAMP}/basic/00/save/basic-10000 # the model saved at step 10000
 ```
+We can also input `--group_config groups_hidden100.json` to plot the sizes of ISS and ISS sparsity. An example:
+```
+structure sparsity:
+16/100 
+10/100 
+62/100 
+54/100 
+66/100 
+79/100 
+group sizes:
+[4800, 4800, 3201, 3201, 6401, 6401]
+```
 
 This command loads the saved model during training and begins testing on the test data.
 After the process ends, it prints F1 and EM scores, and also outputs a json file (`$PWD/out/basic/00/answer/test-000000.json`).
