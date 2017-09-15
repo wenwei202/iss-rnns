@@ -27,7 +27,7 @@ python -m squad.prepro
 ```
 
 ## 2. Training
-Note that the training script save results in the subfolder named as timestamps. Before running, please:
+Note that the training script save results in the subfolder named as timestamps (e.g. `out/2017-06-28___04-27-50/`). Before running, please:
 ```
 mkdir out
 ```
@@ -41,7 +41,7 @@ Before training, it is recommended to first try the following code to verify eve
 python -m basic.cli --mode train --noload --debug
 ```
 
-Then to fully train, run:
+Then to fully train baseline without sparsity learning, run:
 ```
 python -m basic.cli --mode train --noload
 ```
@@ -56,18 +56,13 @@ You can still omit them, but training will be much slower.
 ## 3. Test
 To test, run:
 ```
-python -m basic.cli
+# run test by specifying the shared json and trained model
+python -m basic.cli --len_opt --cluster \
+--shared_path out/2017-06-28___04-27-50/basic/00/shared.json \
+--load_path out/2017-06-28___04-27-50/basic/00/save/basic-10000 # the model saved at step 10000
 ```
 
-Similarly to training, you can give the optimization flags to speed up test (5 minutes on dev data):
-```
-python -m basic.cli --len_opt --cluster
-
-# specify the shared json and trained model
-python -m basic.cli --len_opt --cluster --shared_path out//basic/00/shared.json --load_path out//basic/00/save/basic-10000
-```
-
-This command loads the most recently saved model during training and begins testing on the test data.
+This command loads the saved model during training and begins testing on the test data.
 After the process ends, it prints F1 and EM scores, and also outputs a json file (`$PWD/out/basic/00/answer/test-####.json`,
 where `####` is the step # that the model was saved).
 Note that the printed scores are not official (our scoring scheme is a bit harsher).
