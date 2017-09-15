@@ -8,14 +8,14 @@ By default, LSTMs have hidden sizes of 1500.
 ```
 
 # Usage
-To finetune a model, we can restore the model by `--restore_path ${HOME}/trained_models/ptb/ptb_large_baseline/`, which points to the path of checkpoint files of `model.ckpt-xxx`.
+By default, trained models are saved similarly as `/tmp/2017-06-12___22-48-13/`, where foldername is the time when training started.
+
+To finetune a model, we can restore the model by `--restore_path /tmp/2017-06-12___22-48-13/`, which points to the path of checkpoint files of `model.ckpt-xxx`.
 
 To freeze zero weights during finetuning, we can use `--freeze_mode element`.
 
 Use `python ptb_word_lm.py --help` for more usage.
 # To run
-By default, trained models are saved similarly as `/tmp/2017-06-12___22-48-13/`, where foldername is the time when training started.
-
 ## learning non-structurally sparse LSTMs with L1-norm regularization
 Finetuning trained model by L1-norm regularization
 ```
