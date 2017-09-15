@@ -1,5 +1,7 @@
 # Introduction
-This is code from https://www.tensorflow.org/tutorials/recurrent
+This is code a modified version of https://www.tensorflow.org/tutorials/recurrent
+
+Use `python ptb_word_lm.py --help` for usage.
 
 # Get ptb data
 ```
