@@ -125,23 +125,37 @@ python -m basic.cli --mode train --len_opt --cluster \
 --group_config groups_hidden100.json # the json to specify ISS structures for LSTMs
 ```
 
-
+## Misc
 ### Learning sparse LSTMs by L1-norm regularization 
 ```
 # finetuning with L1
-python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 --l1wd 0.0001 --input_keep_prob 0.9 --num_gpus 2 --batch_size 30
+python -m basic.cli --mode train --len_opt --cluster \
+--num_gpus 2 --batch_size 30 \
+--input_keep_prob 0.9 \
+--load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 \
+--l1wd 0.0002
 ```
 ### Learning to remove columns and rows in the weight matrices of LSTMs by group Lasso regularization 
 ```
-python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 \
---l1wd 0.0001 --row_col_wd 0.0004 --input_keep_prob 0.9 --num_gpus 2 --batch_size 30
+python -m basic.cli --mode train --len_opt --cluster \
+--num_gpus 2 --batch_size 30 \
+--input_keep_prob 0.9 \
+--load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 \
+--l1wd 0.0001 \
+--row_col_wd 0.0004 
 ```
 
+<!--
 ### finetuning with zero weights frozen
 ```
-python -m basic.cli --mode train --len_opt --cluster --load_path out//basic/00/save/basic-10000 --freeze_mode element --input_keep_prob 0.9 --init_lr 0.0002 --num_gpus 2 --batch_size 30
+python -m basic.cli --mode train --len_opt --cluster \
+--num_gpus 2 --batch_size 30 \
+--load_path out//basic/00/save/basic-10000 \
+--freeze_mode element \
+--input_keep_prob 0.9 --init_lr 0.0002 
 ```
- 
+-->
+
 [multi-gpu]: https://www.tensorflow.org/versions/r0.11/tutorials/deep_cnn/index.html#training-a-model-using-multiple-gpu-cards
 [squad]: http://stanford-qa.com
 [paper]: https://arxiv.org/abs/1611.01603
