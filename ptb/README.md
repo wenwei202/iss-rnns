@@ -33,27 +33,7 @@ python ptb_word_lm.py --model sparselarge \
 --config_file structure_grouplasso.json 
 ```
 
-`structure_grouplasso.json` (the default json to learn ISS from scratch):
-```
-{
-  "save_path":"/tmp",
-  "learning_rate": 1.0,
-  "weight_decay": 0.0,
-  "dropout_keep_prob": 0.60,
-  "grouplasso":{
-    "global_decay": 0.00245, # lambda to make trade-off between perlexity and sparsity
-    "Model/RNN/multi_rnn_cell/cell_0/basic_lstm_cell/weights": {
-      "structure_decay_multi": 1.0, # local multiplier of global_decay
-      "coupled_layer": "Model/RNN/multi_rnn_cell/cell_1/basic_lstm_cell/weights"
-    },
-    "Model/RNN/multi_rnn_cell/cell_1/basic_lstm_cell/weights": {
-      "structure_decay_multi": 1.0,
-      "coupled_layer": "Model/softmax_w",
-      "couple_split_num": 1
-    }
-  }
-}
-```
+`structure_grouplasso.json` (the default json to learn ISS from scratch), where `global_decay` is the hyperparameter (lambda) to make trade-off between perlexity and sparsity.
 
 ## Evaluate and display weight matrices of trained model
 ```
@@ -65,7 +45,7 @@ python ptb_word_lm.py \
 --restore_path /tmp/2017-06-12___22-48-13/
 ```
 
-## Train two stacked LSTMs with heterogeneous hidden sizes
+## Directly design two stacked LSTMs with specified hidden sizes and train from scratch
 ```
 python ptb_word_lm_heter.py \
 --model large \
