@@ -27,7 +27,7 @@ python -m squad.prepro
 ```
 
 ## 2. Training BiDAF baseline
-Note that the training script save results in the subfolder named as timestamps (e.g. `out/2017-06-28___04-27-50/`). Before running, please:
+Note that the training script saves results in a subfolder of `out` named as `${TIMESTAMP}` (e.g. `out/2017-07-10___21-37-44/`). Before running, please:
 ```
 mkdir out
 ```
@@ -52,27 +52,39 @@ python -m basic.cli --mode train --noload --len_opt --cluster
 ```
 You can still omit them, but training will be much slower.
 
+Our model supports multi-GPU training.
+We follow the parallelization paradigm described in [TensorFlow Tutorial][multi-gpu].
+In short, if you want to use batch size of 60 (default) but if you have 2 GPUs with 6GB of RAM,
+then you initialize each GPU with batch size of 30, and combine the gradients on CPU.
+This can be easily done by running:
+```
+python -m basic.cli --mode train --noload --num_gpus 2 --batch_size 30
+```
 
 ## 3. Test
 To test, run:
 ```
 # run test by specifying the shared json and trained model
+export TIMESTAMP=2017-07-10___21-37-44
 python -m basic.cli --len_opt --cluster \
---shared_path out/2017-06-28___04-27-50/basic/00/shared.json \
---load_path out/2017-06-28___04-27-50/basic/00/save/basic-10000 # the model saved at step 10000
+--shared_path out/${TIMESTAMP}/basic/00/shared.json \
+--load_path out/${TIMESTAMP}/basic/00/save/basic-10000 # the model saved at step 10000
+
+# Test by multi-gpus
+python -m basic.cli --len_opt --cluster \
+--num_gpus 2 --batch_size 30 \
+--shared_path out/${TIMESTAMP}/basic/00/shared.json \
+--load_path out/${TIMESTAMP}/basic/00/save/basic-10000 # the model saved at step 10000
 ```
 
 This command loads the saved model during training and begins testing on the test data.
-After the process ends, it prints F1 and EM scores, and also outputs a json file (`$PWD/out/basic/00/answer/test-####.json`,
-where `####` is the step # that the model was saved).
+After the process ends, it prints F1 and EM scores, and also outputs a json file (`$PWD/out/basic/00/answer/test-000000.json`).
 Note that the printed scores are not official (our scoring scheme is a bit harsher).
 To obtain the official number, use the official evaluator (copied in `squad` folder) and the output json file:
-
 ```
-python squad/evaluate-v1.1.py $HOME/data/squad/dev-v1.1.json out/basic/00/answer/test-####.json
+python squad/evaluate-v1.1.py \
+$HOME/data/squad/dev-v1.1.json out/basic/00/answer/test-000000.json
 ```
-
-
 
 <!--
 ## Using Pre-trained Model
@@ -87,15 +99,9 @@ python -m basic.cli --mode test --batch_size 8 --eval_num_batches 0 --load_step 
 -->
 
 
-## Multi-GPU Training & Testing
-Our model supports multi-GPU training.
-We follow the parallelization paradigm described in [TensorFlow Tutorial][multi-gpu].
-In short, if you want to use batch size of 60 (default) but if you have 2 GPUs with 6GB of RAM,
-then you initialize each GPU with batch size of 30, and combine the gradients on CPU.
-This can be easily done by running:
-```
-python -m basic.cli --mode train --noload --num_gpus 2 --batch_size 30
+## Learning sparse LSTMs
 
+```
 # finetuning with L1
 python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 --l1wd 0.0001 --input_keep_prob 0.9 --num_gpus 2 --batch_size 30
 
@@ -108,18 +114,6 @@ python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained
 
 # finetuning with zero weights frozen
 python -m basic.cli --mode train --len_opt --cluster --load_path out//basic/00/save/basic-10000 --freeze_mode element --input_keep_prob 0.9 --init_lr 0.0002 --num_gpus 2 --batch_size 30
-```
-
-**Similarly, you can speed up your testing by:**
-```
-python -m basic.cli --num_gpus 2 --batch_size 30 
-
-# specify the shared json and trained model
-export OUTPUT_DIR='out/';
-python -m basic.cli --len_opt --cluster --shared_path ${OUTPUT_DIR}/basic/00/shared.json --load_path ${OUTPUT_DIR}/basic/00/save/basic-10000 --num_gpus 2 --batch_size 30 --plot_weights ;
-python squad/evaluate-v1.1.py \
-$HOME/data/squad/dev-v1.1.json out/basic/00/answer/test-000000.json
-
 ```
  
 
