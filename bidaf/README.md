@@ -102,23 +102,33 @@ python -m basic.cli --mode test --batch_size 8 --eval_num_batches 0 --load_step 
 
 
 ## Learning sparse LSTMs
+### Learning ISS (hidden states) in LSTMs
+```
+python -m basic.cli --mode train --len_opt --cluster \
+--num_gpus 2 --batch_size 30 \
+--input_keep_prob 0.9 \
+--load_path out/${TIMESTAMP}/basic/00/save \ # fine-tune baseline, use [--noload] if traing from scratch
+--structure_wd 0.001 \ # the hyperparameter to make trade-off between sparsity and EM/F1 performance
+--group_config roups_hidden100.json
+```
 
+
+### Learning sparse LSTMs by L1-norm regularization 
 ```
 # finetuning with L1
 python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 --l1wd 0.0001 --input_keep_prob 0.9 --num_gpus 2 --batch_size 30
-
-# finetuning with lasso
+```
+### Learning to remove columns and rows in the weight matrices of LSTMs by group Lasso regularization 
+```
 python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 \
 --l1wd 0.0001 --row_col_wd 0.0004 --input_keep_prob 0.9 --num_gpus 2 --batch_size 30
+```
 
-# learning structure
-python -m basic.cli --mode train --len_opt --cluster --load_path ${HOME}/trained_models/squad/bidaf_adam_baseline/basic-10000 --structure_wd 0.002 --input_keep_prob 0.9 --num_gpus 2 --batch_size 30 --group_config groups.json
-
-# finetuning with zero weights frozen
+### finetuning with zero weights frozen
+```
 python -m basic.cli --mode train --len_opt --cluster --load_path out//basic/00/save/basic-10000 --freeze_mode element --input_keep_prob 0.9 --init_lr 0.0002 --num_gpus 2 --batch_size 30
 ```
  
-
 [multi-gpu]: https://www.tensorflow.org/versions/r0.11/tutorials/deep_cnn/index.html#training-a-model-using-multiple-gpu-cards
 [squad]: http://stanford-qa.com
 [paper]: https://arxiv.org/abs/1611.01603
