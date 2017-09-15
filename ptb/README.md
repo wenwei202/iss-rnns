@@ -32,6 +32,8 @@ python ptb_word_lm.py --model sparselarge \
 --data_path simple-examples/data/  \
 --config_file structure_grouplasso.json 
 ```
+
+`structure_grouplasso.json` (the default json to learn ISS from scratch):
 ```
 {
   "save_path":"/tmp",
@@ -39,9 +41,9 @@ python ptb_word_lm.py --model sparselarge \
   "weight_decay": 0.0,
   "dropout_keep_prob": 0.60,
   "grouplasso":{
-    "global_decay": 0.00245,
+    "global_decay": 0.00245, # lambda to make trade-off between perlexity and sparsity
     "Model/RNN/multi_rnn_cell/cell_0/basic_lstm_cell/weights": {
-      "structure_decay_multi": 1.0,
+      "structure_decay_multi": 1.0, # local multiplier of global_decay
       "coupled_layer": "Model/RNN/multi_rnn_cell/cell_1/basic_lstm_cell/weights"
     },
     "Model/RNN/multi_rnn_cell/cell_1/basic_lstm_cell/weights": {
