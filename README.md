@@ -14,6 +14,6 @@ In this way, we get a regular LSTM but with hidden size reduced by one. The meth
 
 # Examples
 ## Stacked LSTMs
-Code in [ptb](/ptb) is stacked LSTMs for language modeling of Penn TreeBank dataset
+Code in [ptb](/ptb) is stacked LSTMs for language modeling of Penn TreeBank dataset.
 ## Attention model
-Code in [bidaf](/bidaf) is a attention and LSTM based model for Question Answering of SQuAD
+Code in [bidaf](/bidaf) is an attention+LSTM model for Question Answering of SQuAD dataset.
