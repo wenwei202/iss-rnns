@@ -1,4 +1,4 @@
-# Bi-directional Attention Flow for Machine Comprehension
+# Learning Intrinsic Sparse Structures in BiDAF
  
 - This is a modified implementation of [Bi-directional Attention Flow for Machine Comprehension][paper] (Seo et al., 2016).
 - This is tensorflow v1.1.0 comaptible version. 
