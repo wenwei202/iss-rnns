@@ -3,17 +3,21 @@ This is code a modified version of https://www.tensorflow.org/tutorials/recurren
 
 Use `python ptb_word_lm.py --help` for usage.
 
+By default, LSTMs have hidden sizes of 1500.
+
 # Get ptb data
 ```
 ./get_ptd_data.sh
 ```
 # To run
+By default, trained models are saved similarly as `/tmp/2017-06-12___22-48-13/`, where foldername is the time when training started.
+
 ## learning non-structurally sparse LSTMs with L1-norm regularization
 Finetuning trained model by L1-norm regularization
 ```
 python ptb_word_lm.py --model sparselarge \
 --data_path simple-examples/data/ \
---restore_path  ~/trained_models/ptb/ptb_large_baseline/  \
+--restore_path  /tmp/ptb_large_baseline/  \
 --config_file l1.json
 ```
 Weight decay of L1-norm, dropout, etc., are configured in `l1.json`.
@@ -28,9 +32,17 @@ To finetune a model, we can restore the model by `--restore_path ${HOME}/trained
 
 To freeze zero weights during finetuning, we can use `--freeze_mode element`.
 
-`python ptb_word_lm.py --help` for more help.
+## Evaluate and display weight matrices of trained model
+```
+python ptb_word_lm.py \
+--model validtestlarge \
+--data_path simple-examples/data/ \
+--display_weights True \
+--config_file l1.json \
+--restore_path /tmp/2017-06-12___22-48-13/
+```
 
-# Train two stacked LSTMs with heterogeneous hidden sizes
+## Train two stacked LSTMs with heterogeneous hidden sizes
 ```
 python ptb_word_lm_heter.py \
 --model large \
