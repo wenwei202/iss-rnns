@@ -3,6 +3,8 @@
 - This is a modified implementation of [Bi-directional Attention Flow for Machine Comprehension][paper] (Seo et al., 2016).
 - This is tensorflow v1.1.0 comaptible version. 
 
+Use `python -m basic.cli --help` for usage.
+
 ## 0. Requirements
 #### General
 - Python (developed on 3.5.2. Issues have been reported with Python 2!)
