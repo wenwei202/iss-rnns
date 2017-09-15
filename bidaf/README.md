@@ -1,10 +1,7 @@
 # Bi-directional Attention Flow for Machine Comprehension
  
-- This the original implementation of [Bi-directional Attention Flow for Machine Comprehension][paper] (Seo et al., 2016).
-- This is tensorflow v1.1.0 comaptible version. This is not compatible with previous trained models, 
-so if you want to use them, go to [v0.2.1][v0.2.1]. 
-- The CodaLab worksheet for the [SQuAD Leaderboard][squad] submission is available [here][worksheet].
-- Please contact [Minjoon Seo][minjoon] ([@seominjoon][minjoon-github]) for questions and suggestions.
+- This is a modified implementation of [Bi-directional Attention Flow for Machine Comprehension][paper] (Seo et al., 2016).
+- This is tensorflow v1.1.0 comaptible version. 
 
 ## 0. Requirements
 #### General
@@ -34,11 +31,10 @@ Note that the training script save results in the subfolder named as timestamps.
 ```
 mkdir out
 ```
-The model was trained with NVidia Titan X (Pascal Architecture, 2016).
 The model requires at least 12GB of GPU RAM.
 If your GPU RAM is smaller than 12GB, you can either decrease batch size (performance might degrade),
 or you can use multi GPU (see below).
-The training converges at ~18k steps, and it took ~4s per step (i.e. ~20 hours).
+The training converges at ~10k steps, and it took ~10 hours in Titan X.
 
 Before training, it is recommended to first try the following code to verify everything is okay and memory is sufficient:
 ```
