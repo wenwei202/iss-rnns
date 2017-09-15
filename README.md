@@ -11,3 +11,9 @@ It can both reduce parameters in models and obtain regular nonzero weights for f
 
 We proposed Intrinsic Sparse Structures (ISS) in LSTMs. By removing one component of ISS, we can simultaneously remove one hidden state, one cell state, one forget gate, one input gate, one output gate and one input update. 
 In this way, we get a regular LSTM but with hidden size reduced by one. The method of learning ISS is based on group Lasso regularization.
+
+# Examples
+## Stacked LSTMs
+Code in [ptb](/ptb) is stacked LSTMs for language modeling of Penn TreeBank dataset
+## Attention model
+Code in [bidaf](/bidaf) is a attention and LSTM based model for Question Answering of SQuAD
