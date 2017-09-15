@@ -26,7 +26,7 @@ Second, Preprocess Stanford QA dataset (along with GloVe vectors) and save them 
 python -m squad.prepro
 ```
 
-## 2. Training
+## 2. Training BiDAF baseline
 Note that the training script save results in the subfolder named as timestamps (e.g. `out/2017-06-28___04-27-50/`). Before running, please:
 ```
 mkdir out
@@ -72,57 +72,6 @@ To obtain the official number, use the official evaluator (copied in `squad` fol
 python squad/evaluate-v1.1.py $HOME/data/squad/dev-v1.1.json out/basic/00/answer/test-####.json
 ```
 
-### 3.1 Loading from pre-trained weights
-NOTE: this version is not compatible with the following trained models. 
-For compatibility, use [v0.2.1][v0.2.1]. 
-
-Instead of training the model yourself, you can choose to use pre-trained weights that were used for [SQuAD Leaderboard][squad] submission.
-Refer to [this worksheet][worksheet] in CodaLab to reproduce the results.
-If you are unfamiliar with CodaLab, follow these simple steps (given that you met all prereqs above):
-
-1. Download `save.zip` from the [worksheet][worksheet] and unzip it in the current directory.
-2. Copy `glove.6B.100d.txt` from your glove data folder (`$HOME/data/glove/`) to the current directory.
-3. To reproduce single model:
-  
-  ```
-  basic/run_single.sh $HOME/data/squad/dev-v1.1.json single.json
-  ```
-  
-  This writes the answers to `single.json` in the current directory. You can then use the official evaluator to obtain EM and F1 scores. If you want to run on GPU (~5 mins), change the value of batch_size flag in the shell file to a higher number (60 for 12GB GPU RAM). 
-4. Similarly, to reproduce ensemble method:
-  
-  ```
-  basic/run_ensemble.sh $HOME/data/squad/dev-v1.1.json ensemble.json 
-  ```
-  If you want to run on GPU, you should run the script sequentially by removing '&' in the forloop, or you will need to specify different GPUs for each run of the for loop.
-
-## Results
-
-### Dev Data
-
-|          | EM (%) | F1 (%) |
-| -------- |:------:|:------:|
-| single   | 67.8   | 77.4   |
-
-###Dev Data (old)
-NOTE: These numbers are from [v0.2.1][v0.2.1]. 
-
-|          | EM (%) | F1 (%) |
-| -------- |:------:|:------:|
-| single   | 67.7   | 77.3   |
-| ensemble | 72.6   | 80.7   |
-
-
-###Test Data (old)
-NOTE: These numbers are from [v0.2.1][v0.2.1]. 
-
-|          | EM (%) | F1 (%) |
-| -------- |:------:|:------:|
-| single   | 68.0   | 77.3   |
-| ensemble | 73.3   | 81.1   |
-
-Refer to [our paper][paper] for more details.
-See [SQuAD Leaderboard][squad] to compare with other models.
 
 
 <!--
