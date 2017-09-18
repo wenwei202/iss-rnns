@@ -1,6 +1,6 @@
 # About
 This is TensorFlow implementation for training sparse LSTMs. 
-Related paper is in **Learning Intrinsic Sparse Structures within Long Short-term Memory**.
+Related paper is in [Learning Intrinsic Sparse Structures within Long Short-term Memory](https://arxiv.org/abs/1709.05027).
 Both structurally sparse LSTMs and non-structurally sparse LSTMs are supported by the code.
 
 We use L1-norm regularization to obtain non-structurally sparse LSTMs.
