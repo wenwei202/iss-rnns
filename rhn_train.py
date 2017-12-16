@@ -398,9 +398,6 @@ def main(data_path, dataset, seed, _run):
     print("Batched Test Perplexity at this Epoch was %.03f, Bits: %.3f" %
           (tests[best_val_epoch], np.log2(tests[best_val_epoch])))
 
-    write_scalar_summary(summary_writer, 'train_perplexity', trains[best_val_epoch], best_val_epoch)
-    write_scalar_summary(summary_writer, 'valid_perplexity_batch', vals[best_val_epoch], best_val_epoch)
-    write_scalar_summary(summary_writer, 'test_perplexity_batch', tests[best_val_epoch], best_val_epoch)
 
     _run.info['best_val_epoch'] = best_val_epoch
     _run.info['best_valid_perplexity'] = vals[best_val_epoch]
