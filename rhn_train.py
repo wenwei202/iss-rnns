@@ -222,8 +222,9 @@ def evaluate(data_path, dataset, load_model):
   val_config.drop_h = test_config.drop_h = 0.0
   val_config.drop_o = test_config.drop_o = 0.0
   test_config.batch_size = test_config.num_steps = 1
-
-  with tf.Session() as session:
+  config_proto = tf.ConfigProto()
+  config_proto.gpu_options.allow_growth = True
+  with tf.Session(config=config_proto) as session:
     initializer = tf.random_uniform_initializer(-config.init_scale, config.init_scale)
     with tf.variable_scope("model", reuse=None, initializer=initializer):
       _ = Model(is_training=True, config=config)
@@ -302,7 +303,9 @@ def evaluate_mc(data_path, dataset, load_model, mc_steps, seed):
   val_config = deepcopy(config)
   test_config = deepcopy(config)
   test_config.batch_size = test_config.num_steps = 1
-  with tf.Session() as session:
+  config_proto = tf.ConfigProto()
+  config_proto.gpu_options.allow_growth = True
+  with tf.Session(config=config_proto) as session:
     initializer = tf.random_uniform_initializer(-config.init_scale, config.init_scale)
     with tf.variable_scope("model", reuse=None, initializer=initializer):
       _ = Model(is_training=True, config=config)
@@ -336,8 +339,9 @@ def main(data_path, dataset, seed, _run):
   val_config.drop_h = test_config.drop_h = 0.0
   val_config.drop_o = test_config.drop_o = 0.0
   test_config.batch_size = test_config.num_steps = 1
-
-  with tf.Graph().as_default(), tf.Session() as session:
+  config_proto = tf.ConfigProto()
+  config_proto.gpu_options.allow_growth = True
+  with tf.Graph().as_default(), tf.Session(config=config_proto) as session:
     tf.set_random_seed(seed)
     initializer = tf.random_uniform_initializer(-config.init_scale, config.init_scale)
     with tf.variable_scope("model", reuse=None, initializer=initializer):
@@ -401,8 +405,9 @@ def main(data_path, dataset, seed, _run):
 
     _run.info['best_val_epoch'] = best_val_epoch
     _run.info['best_valid_perplexity'] = vals[best_val_epoch]
-
-    with tf.Session() as sess:
+    config_proto = tf.ConfigProto()
+    config_proto.gpu_options.allow_growth = True
+    with tf.Session(config=config_proto) as sess:
       saver.restore(sess, './'  + dataset + "_" + str(seed) + "_best_model.ckpt")
 
       print("Testing on non-batched Valid ...")
