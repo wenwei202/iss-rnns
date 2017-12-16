@@ -15,6 +15,7 @@ import tensorflow as tf
 from sacred import Experiment
 from rhn import Model
 from data.reader import data_iterator
+from tensorflow.core.framework import summary_pb2
 
 ex = Experiment('rhn_prediction')
 logging = tf.logging
@@ -316,6 +317,10 @@ def evaluate_mc(data_path, dataset, load_model, mc_steps, seed):
     test_perplexity = run_mc_epoch(seed, session, mtest, test_data, tf.no_op(), test_config, mc_steps, verbose=True)
     print("Full Test Perplexity: %.3f, Bits: %.3f" % (test_perplexity, np.log2(test_perplexity)))
 
+def write_scalar_summary(summary_writer, tag, value, step):
+  value = summary_pb2.Summary.Value(tag=tag, simple_value=float(value))
+  summary = summary_pb2.Summary(value=[value])
+  summary_writer.add_summary(summary, step)
 
 @ex.automain
 def main(data_path, dataset, seed, _run):
@@ -346,9 +351,14 @@ def main(data_path, dataset, seed, _run):
     saver = tf.train.Saver()
     trains, vals, tests, best_val = [np.inf], [np.inf], [np.inf], np.inf
 
+    summary_writer = tf.summary.FileWriter(
+      os.path.join('./', str(seed)),
+      graph=tf.get_default_graph())
+
     for i in range(config.max_max_epoch):
       lr_decay = config.lr_decay ** max(i - config.max_epoch + 1, 0.0)
       mtrain.assign_lr(session, config.learning_rate / lr_decay)
+      write_scalar_summary(summary_writer, 'learning_rate', config.learning_rate / lr_decay, i + 1)
 
       print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(mtrain.lr)))
       train_perplexity = run_epoch(session, mtrain, train_data, mtrain.train_op, config=config,
@@ -364,6 +374,9 @@ def main(data_path, dataset, seed, _run):
       trains.append(train_perplexity)
       vals.append(valid_perplexity)
       tests.append(test_perplexity)
+      write_scalar_summary(summary_writer, 'train_perplexity', train_perplexity, i + 1)
+      write_scalar_summary(summary_writer, 'valid_perplexity_batch', valid_perplexity, i + 1)
+      write_scalar_summary(summary_writer, 'test_perplexity_batch', test_perplexity, i + 1)
 
       if valid_perplexity < best_val:
         best_val = valid_perplexity
@@ -385,6 +398,10 @@ def main(data_path, dataset, seed, _run):
     print("Batched Test Perplexity at this Epoch was %.03f, Bits: %.3f" %
           (tests[best_val_epoch], np.log2(tests[best_val_epoch])))
 
+    write_scalar_summary(summary_writer, 'train_perplexity', trains[best_val_epoch], best_val_epoch)
+    write_scalar_summary(summary_writer, 'valid_perplexity_batch', vals[best_val_epoch], best_val_epoch)
+    write_scalar_summary(summary_writer, 'test_perplexity_batch', tests[best_val_epoch], best_val_epoch)
+
     _run.info['best_val_epoch'] = best_val_epoch
     _run.info['best_valid_perplexity'] = vals[best_val_epoch]
 
@@ -401,5 +418,8 @@ def main(data_path, dataset, seed, _run):
 
       _run.info['full_best_valid_perplexity'] = valid_perplexity
       _run.info['full_test_perplexity'] = test_perplexity
+
+      write_scalar_summary(summary_writer, 'full_best_valid_perplexity', valid_perplexity, best_val_epoch)
+      write_scalar_summary(summary_writer, 'full_test_perplexity', test_perplexity, best_val_epoch)
 
   return vals[best_val_epoch]
