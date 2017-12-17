@@ -8,7 +8,7 @@ from __future__ import absolute_import, division, print_function
 from copy import deepcopy
 import time
 import os
-
+import json
 import numpy as np
 import tensorflow as tf
 
@@ -19,6 +19,7 @@ from tensorflow.core.framework import summary_pb2
 
 ex = Experiment('rhn_prediction')
 logging = tf.logging
+
 
 class Config:
   pass
@@ -49,6 +50,9 @@ def hyperparameters():
   tied = True
   load_model = ''
   mc_steps = 0
+  group_config=None
+  structure_wd = 0.0
+  zero_threshold = 0.0
   if dataset == 'ptb':
     vocab_size = 10000
   elif dataset == 'enwik8':
@@ -84,6 +88,31 @@ def ptb_sota():
   tied = True
   vocab_size = 10000
 
+@ex.named_config
+def ptb_iss_sota():
+  data_path = 'data'
+  dataset = 'ptb'
+  init_scale = 0.04
+  init_bias = -2.0
+  num_layers = 1
+  depth = 10
+  learning_rate = 0.2
+  lr_decay = 10.0
+  weight_decay = 1e-7
+  max_grad_norm = 10
+  num_steps = 35
+  hidden_size = 830
+  max_epoch = 20
+  max_max_epoch = 500
+  batch_size = 20
+  drop_x = 0.25*0.6
+  drop_i = 0.75*0.6
+  drop_h = 0.25*0.6
+  drop_o = 0.75*0.6
+  tied = True
+  vocab_size = 10000
+  group_config = 'groups_hidden830.json'
+  zero_threshold = 0.01
 
 @ex.named_config
 def enwik8_sota():
@@ -143,6 +172,48 @@ def get_config(_config):
   return C
 
 
+def get_structure_sparsity(sess, config_file):
+  if config_file is None:
+    return
+
+  with open(config_file, 'r') as fi:
+    config_params = json.load(fi)
+    groups = config_params['groups']
+    group_sizes = []
+    print('structure sparsity:')
+    for group in groups:
+      sqr_sum = 0.0
+      group_size = 0
+      for _entry in group:
+        train_var = None
+        for _var in tf.trainable_variables():
+          if _entry['var_name'] == _var.op.name:
+            train_var = _var
+            break
+        assert (train_var is not None)
+        start = _entry['start']
+        end = _entry['end']
+        axis = _entry['axis']
+        assert (end > start and axis < 2)
+        params = train_var.eval(session=sess)
+        assert (len(params.shape) == 2)
+        elt_pow = np.power(params, 2)
+        sqr_sum = sqr_sum + np.sum(elt_pow, axis)[start:end]
+        group_size += params.shape[axis]
+      print('%d/%d' % (sum(sqr_sum == 0), len(sqr_sum)))
+      group_sizes.append(group_size)
+    print('group sizes:')
+    print(group_sizes)
+
+def fetch_sparsity(session, model):
+  fetches = {
+      "sparsity": model.sparsity
+  }
+
+  vals = session.run(fetches)
+  sparsity = vals["sparsity"]
+  return sparsity
+
 def get_data(data_path, dataset):
   if dataset == 'ptb':
     import reader
@@ -186,6 +257,7 @@ def get_noise(x, m, drop_x, drop_i, drop_h, drop_o):
 
 def run_epoch(session, m, data, eval_op, config, verbose=False):
   """Run the model on the given data."""
+  sparsity = {}
   epoch_size = ((len(data) // m.batch_size) - 1) // m.num_steps
   start_time = time.time()
   costs = 0.0
@@ -198,13 +270,14 @@ def run_epoch(session, m, data, eval_op, config, verbose=False):
     feed_dict.update({m.initial_state[i]: state[i] for i in range(m.num_layers)})
     cost, state, _ = session.run([m.cost, m.final_state, eval_op], feed_dict)
     costs += cost
+    sparsity = session.run(m.sparsity)
     iters += m.num_steps
 
     if verbose and step % (epoch_size // 10) == 10:
       print("%.3f perplexity: %.3f speed: %.0f wps" % (step * 1.0 / epoch_size, np.exp(costs / iters),
                                                        iters * m.batch_size / (time.time() - start_time)))
 
-  return np.exp(costs / iters)
+  return np.exp(costs / iters), sparsity
 
 
 @ex.command
@@ -236,15 +309,15 @@ def evaluate(data_path, dataset, load_model):
     saver.restore(session, load_model)
 
     print("Testing on batched Valid ...")
-    valid_perplexity = run_epoch(session, mvalid, valid_data, tf.no_op(), config=val_config)
+    valid_perplexity, _ = run_epoch(session, mvalid, valid_data, tf.no_op(), config=val_config)
     print("Valid Perplexity (batched): %.3f, Bits: %.3f" % (valid_perplexity, np.log2(valid_perplexity)))
 
     print("Testing on non-batched Valid ...")
-    valid_perplexity = run_epoch(session, mtest, valid_data, tf.no_op(), config=test_config, verbose=True)
+    valid_perplexity, _ = run_epoch(session, mtest, valid_data, tf.no_op(), config=test_config, verbose=True)
     print("Full Valid Perplexity: %.3f, Bits: %.3f" % (valid_perplexity, np.log2(valid_perplexity)))
 
     print("Testing on non-batched Test ...")
-    test_perplexity = run_epoch(session, mtest, test_data, tf.no_op(), config=test_config, verbose=True)
+    test_perplexity, _ = run_epoch(session, mtest, test_data, tf.no_op(), config=test_config, verbose=True)
     print("Full Test Perplexity: %.3f, Bits: %.3f" % (test_perplexity, np.log2(test_perplexity)))
 
 
@@ -365,14 +438,14 @@ def main(data_path, dataset, seed, _run):
       write_scalar_summary(summary_writer, 'learning_rate', config.learning_rate / lr_decay, i + 1)
 
       print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(mtrain.lr)))
-      train_perplexity = run_epoch(session, mtrain, train_data, mtrain.train_op, config=config,
+      train_perplexity, sparsity = run_epoch(session, mtrain, train_data, mtrain.train_op, config=config,
                                    verbose=True)
       print("Epoch: %d Train Perplexity: %.3f, Bits: %.3f" % (i + 1, train_perplexity, np.log2(train_perplexity)))
 
-      valid_perplexity = run_epoch(session, mvalid, valid_data, tf.no_op(), config=val_config)
+      valid_perplexity, sparsity = run_epoch(session, mvalid, valid_data, tf.no_op(), config=val_config)
       print("Epoch: %d Valid Perplexity (batched): %.3f, Bits: %.3f" % (i + 1, valid_perplexity, np.log2(valid_perplexity)))
 
-      test_perplexity = run_epoch(session, mvalid, test_data, tf.no_op(), config=val_config)
+      test_perplexity, sparsity = run_epoch(session, mvalid, test_data, tf.no_op(), config=val_config)
       print("Epoch: %d Test Perplexity (batched): %.3f, Bits: %.3f" % (i + 1, test_perplexity, np.log2(test_perplexity)))
 
       trains.append(train_perplexity)
@@ -381,6 +454,8 @@ def main(data_path, dataset, seed, _run):
       write_scalar_summary(summary_writer, 'train_perplexity', train_perplexity, i + 1)
       write_scalar_summary(summary_writer, 'valid_perplexity_batch', valid_perplexity, i + 1)
       write_scalar_summary(summary_writer, 'test_perplexity_batch', test_perplexity, i + 1)
+      for key, value in sparsity.items():
+        write_scalar_summary(summary_writer, key, value, i + 1)
 
       if valid_perplexity < best_val:
         best_val = valid_perplexity
@@ -409,13 +484,14 @@ def main(data_path, dataset, seed, _run):
     config_proto.gpu_options.allow_growth = True
     with tf.Session(config=config_proto) as sess:
       saver.restore(sess, './'  + dataset + "_" + str(seed) + "_best_model.ckpt")
+      sparsity = fetch_sparsity(sess, mtest)
 
       print("Testing on non-batched Valid ...")
-      valid_perplexity = run_epoch(sess, mtest, valid_data, tf.no_op(), config=test_config, verbose=True)
+      valid_perplexity, _ = run_epoch(sess, mtest, valid_data, tf.no_op(), config=test_config, verbose=True)
       print("Full Valid Perplexity: %.3f, Bits: %.3f" % (valid_perplexity, np.log2(valid_perplexity)))
 
       print("Testing on non-batched Test ...")
-      test_perplexity = run_epoch(sess, mtest, test_data, tf.no_op(), config=test_config, verbose=True)
+      test_perplexity, _ = run_epoch(sess, mtest, test_data, tf.no_op(), config=test_config, verbose=True)
       print("Full Test Perplexity: %.3f, Bits: %.3f" % (test_perplexity, np.log2(test_perplexity)))
 
       _run.info['full_best_valid_perplexity'] = valid_perplexity
@@ -423,5 +499,8 @@ def main(data_path, dataset, seed, _run):
 
       write_scalar_summary(summary_writer, 'full_best_valid_perplexity', valid_perplexity, best_val_epoch)
       write_scalar_summary(summary_writer, 'full_test_perplexity', test_perplexity, best_val_epoch)
+      for key, value in sparsity.items():
+        write_scalar_summary(summary_writer, 'final_'+key, value, best_val_epoch)
+      get_structure_sparsity(sess, config.group_config)
 
   return vals[best_val_epoch]

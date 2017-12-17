@@ -9,11 +9,49 @@ from tensorflow.contrib.rnn import core_rnn_cell as rnn_cell
 
 RNNCell = rnn_cell.RNNCell
 
+SPARSITY_VARS = 'sparse_vars'
+
+import json
+
+def reduce_square_sum(var, start=0, end=0, axis=0):
+  the_shape = var.get_shape().as_list()
+  if len(the_shape) == 2:
+    t = tf.square(var)
+    t = tf.reduce_sum(t, axis=axis)
+    assert (end > start and axis < 2)
+    t = tf.gather(t, tf.range(start, end))
+    return t
+  else:
+    raise NotImplementedError('variables with shapes != 2 is not implemented.')
+
+def _build_structure_regularization(group_config, structure_wd):
+  if group_config:
+    with open(group_config, 'r') as fi:
+      config_params = json.load(fi)
+      groups = config_params['groups']
+      for group in groups:
+        sqr_sum = tf.constant(1.0e-8)
+        for _entry in group:
+          train_var = None
+          for _var in tf.trainable_variables():
+            if _entry['var_name'] == _var.op.name:
+              train_var = _var
+              break
+          assert (train_var is not None)
+          tf.add_to_collection(SPARSITY_VARS, train_var)
+          sqr_sum = sqr_sum + reduce_square_sum(
+            train_var, _entry['start'], _entry['end'], _entry['axis']) * _entry['multi']
+        sqrt_sum = tf.sqrt(sqr_sum)
+        reg = tf.reduce_sum(sqrt_sum) * structure_wd
+        return reg
+  else: return 0.0
+
 
 class Model(object):
   """A Variational RHN model."""
 
   def __init__(self, is_training, config):
+    self.config = config
     self.batch_size = batch_size = config.batch_size
     self.num_steps = num_steps = config.num_steps
     self.depth = depth = config.depth
@@ -67,11 +105,36 @@ class Model(object):
     self._final_state = [s[0] for s in state]
     pred_loss = tf.reduce_sum(loss) / batch_size
     self._cost = cost = pred_loss
+
+    iss_loss = _build_structure_regularization(config.group_config, config.structure_wd)
+    self._cost = cost = self._cost + iss_loss
+
+    sparsity = {}
+    if config.group_config:
+      sparse_var_set = list(set(tf.get_collection(SPARSITY_VARS)))
+      # sparsity statistcis
+      for train_var in sparse_var_set:
+        # zerout by small threshold to stablize the sparsity
+        sp_name = train_var.op.name
+        threshold = config.zero_threshold
+        where_cond = tf.less(tf.abs(train_var), threshold)
+        train_var = tf.assign(train_var, tf.where(where_cond,
+                                                  tf.zeros(tf.shape(train_var)),
+                                                  train_var))
+        # statistics
+        s = tf.nn.zero_fraction(train_var)
+        sparsity[sp_name + '_elt_sparsity'] = s
+        s = tf.nn.zero_fraction(tf.reduce_sum(tf.square(train_var), axis=0))
+        sparsity[sp_name + '_col_sparsity'] = s
+        s = tf.nn.zero_fraction(tf.reduce_sum(tf.square(train_var), axis=1))
+        sparsity[sp_name + '_row_sparsity'] = s
+    self._sparsity = sparsity
+
     if not is_training:
       return
     tvars = tf.trainable_variables()
     l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in tvars])
-    self._cost = cost = pred_loss + config.weight_decay * l2_loss
+    self._cost = cost = self._cost + config.weight_decay * l2_loss
 
     self._lr = tf.Variable(0.0, trainable=False)
     self._nvars = np.prod(tvars[0].get_shape().as_list())
@@ -136,6 +199,10 @@ class Model(object):
   @property
   def nvars(self):
     return self._nvars
+
+  @property
+  def sparsity(self):
+    return self._sparsity
 
 
 class RHNCell(RNNCell):
