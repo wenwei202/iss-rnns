@@ -98,13 +98,13 @@ def ptb_iss_sota():
   num_layers = 1
   depth = 10
   learning_rate = 0.2
-  lr_decay = 10.0
+  lr_decay = 1.02
   weight_decay = 1e-7
   max_grad_norm = 10
   num_steps = 35
   hidden_size = 830
   max_epoch = 20
-  max_max_epoch = 55
+  max_max_epoch = 150
   batch_size = 20
   drop_x = 0.25*0.6
   drop_i = 0.75*0.6
@@ -113,8 +113,9 @@ def ptb_iss_sota():
   tied = True
   vocab_size = 10000
   group_config = 'groups_hidden830.json'
-  zero_threshold = 0.01
-  lr_policy = 'equal_step'
+  zero_threshold = 0.0004
+  lr_policy = 'quick_start'
+  #lr_policy = 'equal_step'
 
 @ex.named_config
 def enwik8_sota():
