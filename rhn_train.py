@@ -53,6 +53,7 @@ def hyperparameters():
   group_config=None
   structure_wd = 0.0
   zero_threshold = 0.0
+  lr_policy = 'quick_start'
   if dataset == 'ptb':
     vocab_size = 10000
   elif dataset == 'enwik8':
@@ -103,7 +104,7 @@ def ptb_iss_sota():
   num_steps = 35
   hidden_size = 830
   max_epoch = 20
-  max_max_epoch = 500
+  max_max_epoch = 55
   batch_size = 20
   drop_x = 0.25*0.6
   drop_i = 0.75*0.6
@@ -113,6 +114,7 @@ def ptb_iss_sota():
   vocab_size = 10000
   group_config = 'groups_hidden830.json'
   zero_threshold = 0.01
+  lr_policy = 'equal_step'
 
 @ex.named_config
 def enwik8_sota():
@@ -433,7 +435,12 @@ def main(data_path, dataset, seed, _run):
       graph=tf.get_default_graph())
 
     for i in range(config.max_max_epoch):
-      lr_decay = config.lr_decay ** max(i - config.max_epoch + 1, 0.0)
+      if config.lr_policy == 'quick_start':
+        lr_decay = config.lr_decay ** max(i - config.max_epoch + 1, 0.0)
+      elif config.lr_policy == 'equal_step':
+        lr_decay = config.lr_decay ** (i // (config.max_max_epoch // 3))
+      else: raise ValueError('Wrong lr_policy')
+
       mtrain.assign_lr(session, config.learning_rate / lr_decay)
       write_scalar_summary(summary_writer, 'learning_rate', config.learning_rate / lr_decay, i + 1)
 
