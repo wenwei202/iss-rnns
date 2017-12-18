@@ -53,6 +53,7 @@ def hyperparameters():
   group_config=None
   structure_wd = 0.0
   zero_threshold = 0.0
+  drop_multi = 1.0
   lr_policy = 'quick_start'
   if dataset == 'ptb':
     vocab_size = 10000
@@ -106,10 +107,11 @@ def ptb_iss_sota():
   max_epoch = 20
   max_max_epoch = 150
   batch_size = 20
-  drop_x = 0.25*0.6
-  drop_i = 0.75*0.6
-  drop_h = 0.25*0.6
-  drop_o = 0.75*0.6
+  drop_multi = 0.6
+  drop_x = 0.25*drop_multi
+  drop_i = 0.75*drop_multi
+  drop_h = 0.25*drop_multi
+  drop_o = 0.75*drop_multi
   tied = True
   vocab_size = 10000
   group_config = 'groups_hidden830.json'
