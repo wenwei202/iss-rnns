@@ -107,7 +107,6 @@ class Model(object):
     self._cost = cost = pred_loss
 
     iss_loss = _build_structure_regularization(config.group_config, config.structure_wd)
-    self._cost = cost = self._cost + iss_loss
 
     sparsity = {}
     if config.group_config:
@@ -132,6 +131,7 @@ class Model(object):
 
     if not is_training:
       return
+    self._cost = cost = self._cost + iss_loss
     tvars = tf.trainable_variables()
     l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in tvars])
     self._cost = cost = self._cost + config.weight_decay * l2_loss
