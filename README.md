@@ -10,7 +10,7 @@ We use group Lasso regularization to obtain structurally sparse LSTMs.
 It can both reduce parameters in models and obtain regular nonzero weights for fast computation.
 
 We proposed Intrinsic Sparse Structures (ISS) in LSTMs. By removing one component of ISS, we can simultaneously remove one hidden state, one cell state, one forget gate, one input gate, one output gate and one input update. 
-In this way, we get a regular LSTM but with hidden size reduced by one. The method of learning ISS is based on group Lasso regularization.
+In this way, we get a regular LSTM but with hidden size reduced by one. The method of learning ISS is based on group Lasso regularization. The ISS approach is also extended to Recurrent Highway Networks to learn the number of units per layer.
 
 # Examples
 ## Stacked LSTMs
