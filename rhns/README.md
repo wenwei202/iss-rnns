@@ -1,5 +1,7 @@
 # Recurrent Highway Networks
 
+This is tensorflow v1.0.0 comaptible version.
+
 ## To run
 ```
 python rhn_train.py with ptb_iss_sota 'structure_wd=0.005' 
