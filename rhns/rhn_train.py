@@ -105,7 +105,7 @@ def ptb_iss_sota():
   num_steps = 35
   hidden_size = 830
   max_epoch = 20
-  max_max_epoch = 150
+  max_max_epoch = 500
   batch_size = 20
   drop_multi = 0.6
   drop_x = 0.25*drop_multi
