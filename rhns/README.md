@@ -2,10 +2,13 @@
 
 This is tensorflow v1.0.0 comaptible version.
 
-## To run
+## To run RHNs with ISS
 ```
 python rhn_train.py with ptb_iss_sota 'structure_wd=0.005' 
 ```
+
+===============================================================================
+
 *What?*
 
 This repository contains code accompanying the paper [Recurrent Highway Networks](https://arxiv.org/abs/1607.03474 "Recurrent Highway Networks") (RHNs). 
