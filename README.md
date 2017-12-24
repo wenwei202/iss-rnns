@@ -2,6 +2,7 @@
 This is TensorFlow implementation for training sparse LSTMs. 
 Related paper is in [Learning Intrinsic Sparse Structures within Long Short-term Memory](https://arxiv.org/abs/1709.05027).
 Both structurally sparse LSTMs and non-structurally sparse LSTMs are supported by the code.
+The work on sparse CNNs is available [here](https://github.com/wenwei202/caffe/tree/scnn).
 
 We use L1-norm regularization to obtain non-structurally sparse LSTMs.
 The effectiveness of L1-norm regularization is similar to connection pruning, which can significantly reduce parameters in LSTMs but the irregular pattern of non-zero weights may not be friendly for computation efficiency.
