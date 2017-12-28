@@ -1,0 +1,66 @@
+{
+  "comments":[
+      "var_name: the name of variable",
+      "multi: the local multiplier of global decay",
+      "axis: the dimension to form groups",
+      "start(end): the start(end) index of groups"
+    ],
+  "groups":[
+    [
+      {"var_name":"model/embedding", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+
+      {"var_name":"model/RHN0/h_0/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/h_0/Linear/Matrix", "multi":1.0, "axis":1, "start":1000, "end":2000}, 
+      {"var_name":"model/RHN0/h_0/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_0/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_0/Linear/Matrix", "multi":1.0, "axis":1, "start":1000, "end":2000}, 
+      {"var_name":"model/RHN0/t_0/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+
+      {"var_name":"model/RHN0/h_1/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/h_1/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_1/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_1/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+
+      {"var_name":"model/RHN0/h_2/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/h_2/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_2/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_2/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+
+      {"var_name":"model/RHN0/h_3/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/h_3/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_3/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_3/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+
+      {"var_name":"model/RHN0/h_4/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/h_4/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_4/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_4/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+
+      {"var_name":"model/RHN0/h_5/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/h_5/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_5/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_5/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+
+      {"var_name":"model/RHN0/h_6/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/h_6/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_6/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_6/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+
+      {"var_name":"model/RHN0/h_7/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/h_7/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_7/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_7/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+
+      {"var_name":"model/RHN0/h_8/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/h_8/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_8/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_8/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+
+      {"var_name":"model/RHN0/h_9/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/h_9/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_9/Linear/Matrix", "multi":1.0, "axis":1, "start":0, "end":1000}, 
+      {"var_name":"model/RHN0/t_9/Linear/Matrix", "multi":1.0, "axis":0, "start":0, "end":1000}
+
+    ]
+  ]
+}

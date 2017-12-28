@@ -91,6 +91,34 @@ def ptb_sota():
   vocab_size = 10000
 
 @ex.named_config
+def ptb_iss_1000():
+  data_path = 'data'
+  dataset = 'ptb'
+  init_scale = 0.04
+  init_bias = -2.0
+  num_layers = 1
+  depth = 10
+  learning_rate = 0.2
+  lr_decay = 1.02
+  weight_decay = 1e-7
+  max_grad_norm = 10
+  num_steps = 35
+  hidden_size = 1000
+  max_epoch = 20
+  max_max_epoch = 500
+  batch_size = 20
+  drop_multi = 1.0
+  drop_x = 0.25*drop_multi
+  drop_i = 0.75*drop_multi
+  drop_h = 0.25*drop_multi
+  drop_o = 0.75*drop_multi
+  tied = True
+  vocab_size = 10000
+  group_config = 'groups_hidden1000.json'
+  zero_threshold = 0.0004
+  lr_policy = 'quick_start'
+
+@ex.named_config
 def ptb_iss_sota():
   data_path = 'data'
   dataset = 'ptb'
