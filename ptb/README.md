@@ -1,3 +1,6 @@
+# TensorFlow 
+version 1.0
+
 # Introduction
 This is code a modified version of https://www.tensorflow.org/tutorials/recurrent
 
