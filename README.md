@@ -1,3 +1,5 @@
+*To duplicate, please use the exact tensorflow versions as mentioned.*
+
 # About
 This is TensorFlow implementation for training sparse LSTMs. 
 Related paper is publised in ICLR 2018: [Learning Intrinsic Sparse Structures within Long Short-term Memory](https://arxiv.org/abs/1709.05027).
