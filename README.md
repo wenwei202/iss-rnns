@@ -2,7 +2,7 @@
 
 # About
 This is TensorFlow implementation for training sparse LSTMs. 
-Related paper is publised in ICLR 2018: [Learning Intrinsic Sparse Structures within Long Short-term Memory](https://arxiv.org/abs/1709.05027).
+Related paper is publised in ICLR 2018: [Learning Intrinsic Sparse Structures within Long Short-term Memory](https://www.microsoft.com/en-us/research/publication/learning-intrinsic-sparse-structures-within-long-short-term-memory/).
 Both structurally sparse LSTMs and non-structurally sparse LSTMs are supported by the code.
 The work on sparse CNNs is available [here](https://github.com/wenwei202/caffe/tree/scnn). Poster is [here](/Poster_Wen_ICLR2018.pdf).
 
